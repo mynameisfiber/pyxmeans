@@ -13,3 +13,5 @@ kmeans is memory-inefficient.
 * Use lower-level kmeans implemintation focues on memory efficiency in order to
   not use sklearn
 * Optimize data layout when dealing with / comparing computed clusters
+
+Inspired by [goxmeans](https://github.com/danielhfrank/goxmeans/)

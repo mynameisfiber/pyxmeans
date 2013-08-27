@@ -73,7 +73,7 @@ class XMeans(object):
 
     @classmethod
     def _free_params(cls, num_clusters, num_dims):
-        return (num_clusters - 1) + (num_clusters * num_dims) + 1
+        return num_clusters * (num_dims + 1)
 
 
     @classmethod
@@ -93,10 +93,10 @@ class XMeans(object):
     @classmethod
     def _cluster_variance(cls, num_points, clusters, centroids):
         s = 0
-        denom = num_points - len(centroids)
+        denom = float(num_points - len(centroids))
         for cluster, centroid in zip(clusters, centroids):
             distances = euclidean_distances(cluster, centroid)
-            s += sum(distance*distance for distance in distances)
+            s += (distances*distances).sum()
         return s / denom
 
 
@@ -106,5 +106,5 @@ class XMeans(object):
         else:
             centroids = np.asarray(centroids)
         #return KMeans(n_clusters=k, precompute_distances=False, centroids=centroids).fit(data)
-        N = 1000 #int(len(data) * 0.25)
+        N = 1500 #int(len(data) * 0.25)
         return MiniBatchKMeans(n_clusters=k, init=centroids, batch_size=N, compute_labels=True).fit(data)
