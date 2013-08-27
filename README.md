@@ -7,6 +7,11 @@ runnable, I chose to use MiniBatchKMeans instead of KMeans, but they should be
 swappable.  This choice was primarily made because `sklearn`'s implementation of
 kmeans is memory-inefficient.
 
+### Dependencies
+
+* [milk](http://pythonhosted.org/milk/) (with the [kmeans centroid](https://github.com/luispedro/milk/pull/11) patch)
+* [scikit-learn](http://scikit-learn.org/) (soon to be removed)
+* [numpy](http://numpy.org/)
 
 ### Todo:
 

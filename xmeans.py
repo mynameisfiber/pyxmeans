@@ -1,10 +1,13 @@
 #!/usr/bin/env python2.7
 
 import numpy as np
-from sklearn.cluster import MiniBatchKMeans
+from milk.unsupervised import kmeans
 from sklearn.metrics import euclidean_distances
+from collections import namedtuple
 
 import logging
+
+KMeansResult = namedtuple("KMeansResult", ("labels", "centroids"))
 
 FORMAT = '[%(asctime)s] %%(levelname)s - (funcName)s:%(lineno)d: %(message)s'
 logging.basicConfig(format=FORMAT, level=logging.INFO)
@@ -24,13 +27,13 @@ class XMeans(object):
             logging.info("Training with k=%d", k)
             self._model = self._fit(k, self.data, self.cluster_centers or None)
             
-            centroid_distances = euclidean_distances(self._model.cluster_centers_, self._model.cluster_centers_)
+            centroid_distances = euclidean_distances(self._model.centroids, self._model.centroids)
             centroid_distances += np.diag([np.Infinity] * k)
             centroids_range = centroid_distances.min(axis=-1)
 
             self.cluster_centers = []
-            for i, centroid in enumerate(self._model.cluster_centers_):
-                logging.info("\tSplitting cluster %d / %d", i+1, len(self._model.cluster_centers_))
+            for i, centroid in enumerate(self._model.centroids):
+                logging.info("\tSplitting cluster %d / %d", i+1, len(self._model.centroids))
                 direction = np.random.random(centroid.shape)
                 vector = direction * (centroids_range[i] / np.sqrt(direction.dot(direction)))
 
@@ -38,19 +41,19 @@ class XMeans(object):
                 new_point2 = centroid - vector
 
                 logging.info("\t\tRunning secondary kmeans")
-                points = self.data[self._model.labels_ == i]
-                test_kmeans = self._fit(2, points, np.asarray([new_point1, new_point2]))
+                points = self.data[self._model.labels == i]
+                test_model = self._fit(2, points, np.asarray([new_point1, new_point2]))
 
-                cluster1 = points[test_kmeans.labels_ == 0]
-                cluster2 = points[test_kmeans.labels_ == 1]
+                cluster1 = points[test_model.labels == 0]
+                cluster2 = points[test_model.labels == 1]
 
-                bic_parent = XMeans.bic([points], self._model.cluster_centers_)
-                bic_child = XMeans.bic([cluster1, cluster2], test_kmeans.cluster_centers_)
+                bic_parent = XMeans.bic([points], self._model.centroids)
+                bic_child = XMeans.bic([cluster1, cluster2], test_model.centroids)
                 logging.info("\t\tbic_parent = %f, bic_child = %f", bic_parent, bic_child)
                 if bic_child > bic_parent:
                     logging.info("\tUsing children")
-                    self.cluster_centers.append(test_kmeans.cluster_centers_[0])
-                    self.cluster_centers.append(test_kmeans.cluster_centers_[1])
+                    self.cluster_centers.append(test_model.centroids[0])
+                    self.cluster_centers.append(test_model.centroids[1])
                 else:
                     logging.info("\tUsing parent")
                     self.cluster_centers.append(centroid)
@@ -101,10 +104,7 @@ class XMeans(object):
 
 
     def _fit(self, k, data, centroids=None):
-        if centroids is None:
-            centroids = "k-means++"
-        else:
-            centroids = np.asarray(centroids)
-        #return KMeans(n_clusters=k, precompute_distances=False, centroids=centroids).fit(data)
-        N = 1500 #int(len(data) * 0.25)
-        return MiniBatchKMeans(n_clusters=k, init=centroids, batch_size=N, compute_labels=True).fit(data)
+        if centroids is not None:
+            centroids = np.asarray(centroids, dtype=data.dtype)
+        result = kmeans(data, k, centroids=centroids, max_iter=250)
+        return KMeansResult(*result)
