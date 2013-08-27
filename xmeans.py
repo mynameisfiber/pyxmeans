@@ -65,7 +65,7 @@ class XMeans(object):
         num_points = sum(len(cluster) for cluster in clusters)
         num_dims = clusters[0][0].shape[0]
 
-        log_likelihood = XMeans._loglikelyhood(num_points, num_dims, clusters, centroids)
+        log_likelihood = XMeans._loglikelihood(num_points, num_dims, clusters, centroids)
         num_params = XMeans._free_params(len(clusters), num_dims)
 
         return log_likelihood - num_params / 2.0 * np.log(num_points)
@@ -77,7 +77,7 @@ class XMeans(object):
 
 
     @classmethod
-    def _loglikelyhood(cls, num_points, num_dims, clusters, centroids):
+    def _loglikelihood(cls, num_points, num_dims, clusters, centroids):
         ll = 0
         for cluster in clusters:
             fRn = len(cluster)
