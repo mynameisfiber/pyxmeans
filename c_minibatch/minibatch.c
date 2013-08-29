@@ -46,6 +46,9 @@ void save_int_matrix(int *data, char *filename, int N, int D) {
     fclose(fd);
 }
 
+/*
+ * Returns the squared euclidian distance between vectors A and B of length D
+ */
 double distance(double *A, double *B, int D) {
     double d = 0.0;
     double dx = 0.0;
@@ -56,6 +59,10 @@ double distance(double *A, double *B, int D) {
     return d;
 }
 
+/*
+ * Returns the index of the closest centroid to the inputted vector where k is
+ * the number of centroids and D is the dimensionality of the space
+ */
 int closest_centroid(double *vector, double *centroids, int k, int D) {
     int c = -1;
     double min_distance, cur_distance;
@@ -69,6 +76,10 @@ int closest_centroid(double *vector, double *centroids, int k, int D) {
     return c;
 }
 
+/*
+ * Returns the distance to the closest centroid to the inputted vector where k is
+ * the number of centroids and D is the dimensionality of the space
+ */
 double distance_to_closest_centroid(double *vector, double *centroids, int k, int D) {
     double min_distance = -1.0;
     double cur_distance;
@@ -81,6 +92,10 @@ double distance_to_closest_centroid(double *vector, double *centroids, int k, in
     return min_distance;
 }
 
+/*
+ * Moves the given centroid closer to the given vector with a learning rate
+ * proportional to the number of vectors already in the centroid
+ */
 void gradient_step(double *vector, double *centroid, int count, int D) {
     double eta = 1.0 / count;
     double eta_compliment = 1.0 - eta;
@@ -89,14 +104,18 @@ void gradient_step(double *vector, double *centroid, int count, int D) {
     }
 }
 
+/*
+ * Will calculate a list of n unique integers in [0,N) and fill sample_indexes
+ * with the result
+ */
 void generate_random_indexes(int N, int n, int *sample_indexes) {
-    // Parameters:
-    //      N - size of array to pick samples from
-    //      n - number of samples to pick
-    //      sample_indexes - array of the sample indexes (len(sample_indexes) == n)
-    //
-    // TODO: generate the sample indexes with a LCG
-    //
+    /* Parameters:
+     *      N - size of array to pick samples from
+     *      n - number of samples to pick
+     *      sample_indexes - array of the sample indexes (len(sample_indexes) == n)
+     *
+     * TODO: generate the sample indexes with a LCG
+     */
     
     for(int i=0; i<n; i++) {
         int index;
@@ -110,8 +129,12 @@ void generate_random_indexes(int N, int n, int *sample_indexes) {
     }
 }
 
+/*
+ * Calculates the bayesian information criterion for clustered data which
+ * represents how good a model the centroids represents.
+ */
 double bayesian_information_criterion(double *data, double *centroids, int k, int N, int D) {
-    // Calculate the variance of the model and the centroid counts
+    /* Calculate the variance of the model and the centroid counts */
     int *centroid_count = (int*) malloc(k * sizeof(int));
     for(int c=0; c<k; c++) {
         centroid_count[c] = 0;
@@ -128,7 +151,7 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
         variance = nextafter(0, 1);
     }
 
-    // Calculate the log likelihood
+    /* Calculate the log likelihood */
     double log_likelihood = 0.0;
     double t1, t2, t3, t4;
     double ccount;
@@ -143,7 +166,7 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
         t4 = (ccount - 1.0) / 2.0;
         log_likelihood += t1 - t2 - t3 - t4;
     }
-    // calculate the BIC with the number of free parameters = k * (D + 1)
+    /* calculate the BIC with the number of free parameters = k * (D + 1) */
     double bic = log_likelihood - k * (D + 1) * 2.0 * log(N);
 
     free(centroid_count);
@@ -151,6 +174,11 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
 }
 
 
+/*
+ * Does max_iter iterations of minibatch on the given data.  The centroids
+ * should already be initialized and each batch will consist of n_samples
+ * samples from the data.
+ */
 void minibatch(double *data, double *centroids, int n_samples, int max_iter, int k, int N, int D)  {
     // assert(k < n_samples < N)
     // assert(data.shape == (N, D)
@@ -230,16 +258,21 @@ void gaussian_data(double *data, int K, int N, int D) {
     free(center);
 }
 
+/*
+ * Initialize centroids using the k-means++ algorithm over the given data.
+ */
 void kmeanspp(double *data, double *centroids, int k, int N, int D) {
-    // The first cluster is centered from a randomly chosen point in the data
+    /* The first cluster is centered from a randomly chosen point in the data */
     int index = rand() / (double)RAND_MAX * N;
     for(int i=0; i<D; i++) {
         centroids[i] = data[index*D + i];
     }
 
-    // Now we pick random data points to use for centroids using a weighted
-    // probability propotional to the datapoints squared distance to the
-    // closest centroid
+    /*
+     * Now we pick random data points to use for centroids using a weighted
+     * probability propotional to the datapoints squared distance to the
+     * closest centroid
+     */
     double distance, total_distance2;
     double *distances = (double*) malloc(N * sizeof(double));
     for(int c=1; c<k; c++) {
