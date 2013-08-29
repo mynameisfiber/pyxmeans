@@ -1,0 +1,4 @@
+*.png
+data/
+*.dSYM
+minibatch
