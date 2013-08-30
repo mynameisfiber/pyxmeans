@@ -1,5 +1,14 @@
 CC := gcc
-CFLAGS := -O3 -std=c99 -lgomp -lc -DVERBOSE
+CFLAGS := -O3 -std=c99 -fopenmp -DVERBOSE
+LDFLAGS := -lgomp -lc
 
-minibatch: minibatch.c
-	$(CC) minibatch.c -o minibatch $(CFLAGS)
+OBJECTS := $(addsuffix .o, $(basename $(wildcard *.c)))
+
+minibatch: $(OBJECTS)
+	$(CC) $^ -o minibatch $(LDFLAGS)
+
+%.o: %.c %.h 
+	$(CC) $< -c $(CFLAGS)
+
+clean:
+	rm -rf *.o minibatch minibatch.dSYM

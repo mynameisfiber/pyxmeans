@@ -3,27 +3,9 @@
 #include <math.h>
 #include <time.h>
 
-#define PI (3.141592653589793)
-#ifdef VERBOSE
-/* macro using var args */
-#define _LOG(...) do { fprintf(stderr, "[%lu] ", time(NULL)); fprintf (stderr, ## __VA_ARGS__); } while(0)
-#else
-/* when debug isn't defined all the macro calls do absolutely nothing */
-#define _LOG(...) do {;} while(0)
-#endif
-
-int closest_centroid(double *vector, double *centroids, int k, int D);
-double distance(double *A, double *B, int D);
-double distance_to_closest_centroid(double *vector, double *centroids, int k, int D);
-void gaussian_data(double *data, int K, int N, int D);
-void generate_random_indexes(int N, int n, int *sample_indexes);
-void gradient_step(double *vector, double *centroid, int count, int D);
-void kmeanspp(double *data, double *centroids, int k, int N, int D);
-void minibatch(double *data, double *centroids, int n_samples, int max_iter, int k, int N, int D);
-void random_matrix(double *data, int N, int D);
-void save_double_matrix(double *data, char *filename, int N, int D);
-void save_int_matrix(int *data, char *filename, int N, int D);
-double bayesian_information_criterion(double *data, double *centroids, int k, int N, int D);
+#include "minibatch.h"
+#include "generate_data.h"
+#include "distance.h"
 
 void save_double_matrix(double *data, char *filename, int N, int D) {
     FILE *fd = fopen(filename, "w+");
@@ -46,51 +28,6 @@ void save_int_matrix(int *data, char *filename, int N, int D) {
     fclose(fd);
 }
 
-/*
- * Returns the squared euclidian distance between vectors A and B of length D
- */
-double distance(double *A, double *B, int D) {
-    double d = 0.0;
-    double dx = 0.0;
-    for (int i=0; i<D; i++) {
-        dx = (*A++) - (*B++);
-        d += dx * dx;
-    }
-    return d;
-}
-
-/*
- * Returns the index of the closest centroid to the inputted vector where k is
- * the number of centroids and D is the dimensionality of the space
- */
-int closest_centroid(double *vector, double *centroids, int k, int D) {
-    int c = -1;
-    double min_distance, cur_distance;
-    for(int i=0; i<k; i++) {
-        cur_distance = distance(vector, (centroids + i * D), D);
-        if (c == -1 || cur_distance < min_distance) {
-            c = i;
-            min_distance = cur_distance;
-        }
-    }
-    return c;
-}
-
-/*
- * Returns the distance to the closest centroid to the inputted vector where k is
- * the number of centroids and D is the dimensionality of the space
- */
-double distance_to_closest_centroid(double *vector, double *centroids, int k, int D) {
-    double min_distance = -1.0;
-    double cur_distance;
-    for(int i=0; i<k; i++) {
-        cur_distance = distance(vector, (centroids + i * D), D);
-        if (min_distance < 0 || cur_distance < min_distance) {
-            min_distance = cur_distance;
-        }
-    }
-    return min_distance;
-}
 
 /*
  * Moves the given centroid closer to the given vector with a learning rate
@@ -101,31 +38,6 @@ void gradient_step(double *vector, double *centroid, int count, int D) {
     double eta_compliment = 1.0 - eta;
     for(int i=0; i<D; i++) {
         centroid[i] = eta_compliment * centroid[i] + eta * vector[i];
-    }
-}
-
-/*
- * Will calculate a list of n unique integers in [0,N) and fill sample_indexes
- * with the result
- */
-void generate_random_indexes(int N, int n, int *sample_indexes) {
-    /* Parameters:
-     *      N - size of array to pick samples from
-     *      n - number of samples to pick
-     *      sample_indexes - array of the sample indexes (len(sample_indexes) == n)
-     *
-     * TODO: generate the sample indexes with a LCG
-     */
-    
-    for(int i=0; i<n; i++) {
-        int index;
-        for(int j=-1; j<i; j++) {
-            if (j == -1 || sample_indexes[j] == index) {
-                index = (int)(rand() / (double)RAND_MAX * N);
-                j = 0;
-            }
-        }
-        sample_indexes[i] = index;
     }
 }
 
@@ -235,27 +147,29 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, int
     free(cluster_cache);
 }
 
-void random_matrix(double *data, int N, int D) {
-    for(int i=0; i<N; i++) {
-        for(int j=0; j<D; j++) {
-            data[i*D + j] = rand() / (double)RAND_MAX;
+/*
+ * Will calculate a list of n unique integers in [0,N) and fill sample_indexes
+ * with the result
+ */
+void generate_random_indexes(int N, int n, int *sample_indexes) {
+    /* Parameters:
+     *      N - size of array to pick samples from
+     *      n - number of samples to pick
+     *      sample_indexes - array of the sample indexes (len(sample_indexes) == n)
+     *
+     * TODO: generate the sample indexes with a LCG
+     */
+    
+    for(int i=0; i<n; i++) {
+        int index;
+        for(int j=-1; j<i; j++) {
+            if (j == -1 || sample_indexes[j] == index) {
+                index = (int)(rand() / (double)RAND_MAX * N);
+                j = 0;
+            }
         }
+        sample_indexes[i] = index;
     }
-}
-
-void gaussian_data(double *data, int K, int N, int D) {
-    double *center = (double*) malloc(D * sizeof(double));
-    for(int i=0; i<N; i++) {
-        if (i % (N/K) == 0) {
-            random_matrix(center, N, 1);
-        }
-
-        for(int j=0; j<D; j++) {
-            double dx = center[j] - (rand() / (double)RAND_MAX - 0.5)/ 25.0;
-            data[i*D + j] = exp(-1.0 * dx * dx);
-        }
-    }
-    free(center);
 }
 
 /*

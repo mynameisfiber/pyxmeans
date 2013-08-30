@@ -1,3 +1,4 @@
+*.o
 *.png
 data/
 *.dSYM
