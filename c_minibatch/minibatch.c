@@ -97,12 +97,9 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, int
     // assert(centoids.shape == (k, D)
 
     _LOG("Initializing\n");
-    char filename[128];
-    int *sample_indexes = (int*) malloc(n_samples * sizeof(int));
+    int *sample_indicies = (int*) malloc(n_samples * sizeof(int));
     int *centroid_counts = (int*) malloc(k * sizeof(int));
-    double *cluster_cache = (double*) malloc(n_samples * sizeof(double));
-    double eta;
-    int idx, cur_cluster;
+    int *cluster_cache = (int*) malloc(n_samples * sizeof(int));
 
     for (int i=0; i<k; i++) {
         centroid_counts[i] = 0;
@@ -113,28 +110,17 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, int
         _LOG("Iteration %d\n", iter);
 
         _LOG("\tGenerating samples\n");
-        generate_random_indexes(N, n_samples, sample_indexes);
+        generate_random_indicies(N, n_samples, sample_indicies);
 
-        _LOG("\tGenerating cache\n");
-        for(int i=0; i<n_samples; i++) {
-            idx = sample_indexes[i];
-            cluster_cache[i] = closest_centroid(data + idx * D, centroids, k, D);
-        }
-
-        _LOG("\tUpdating centroids\n");
-        for(int i=0; i<n_samples; i++) {
-            idx = sample_indexes[i];
-            cur_cluster = cluster_cache[i];
-            centroid_counts[cur_cluster] += 1;
-            gradient_step(data + idx * D, centroids + cur_cluster * D, centroid_counts[cur_cluster], D);
-        }
+        minibatch_iteration(data, centroids, sample_indicies, centroid_counts, cluster_cache, n_samples, k, N, D);
 
 #ifdef DEBUG_OUTPUT
+        char filename[128];
         sprintf(filename, "data/centroids-%02d.dat", iter);
         save_double_matrix(centroids, filename, k, D);
 
         sprintf(filename, "data/samples-%02d.dat", iter);
-        save_int_matrix(sample_indexes, filename, n_samples, 1);
+        save_int_matrix(sample_indicies, filename, n_samples, 1);
 
         _LOG("\tBIC of current model: %f\n", bayesian_information_criterion(data, centroids, k, N, D));
 #endif
@@ -143,32 +129,67 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, int
     
     _LOG("Cleaning up\n");
     free(centroid_counts);
-    free(sample_indexes);
+    free(sample_indicies);
     free(cluster_cache);
 }
 
 /*
- * Will calculate a list of n unique integers in [0,N) and fill sample_indexes
+ * Does a single iteration of minibatch on the given data.
+ * Parameters:
+ *      data: the data to cluster centroids: location of the centroids
+ *      sample_indicies: list of indexes into data that should be used for the
+ *          clustering 
+ *      centroid_counts: a count of the number of datapoints found
+ *          in each centroid 
+ *      cluster_cache: a cache of which cluster a sample belongs to.
+ */
+void minibatch_iteration(double *data, double *centroids, int *sample_indicies, int *centroid_counts, int *cluster_cache, int n_samples, int k, int N, int D)  {
+    // assert(k < n_samples < N)
+    // assert(data.shape == (N, D)
+    // assert(centoids.shape == (k, D)
+    // assert(sample_indicies.shape == (n_samples,)
+    // assert(centroid_counts.shape == (k, )
+    // assert(cluster_cache.shape == (n_samples, )
+
+    int idx, cur_cluster;
+
+    _LOG("\tGenerating cache\n");
+    for(int i=0; i<n_samples; i++) {
+        idx = sample_indicies[i];
+        cluster_cache[i] = closest_centroid(data + idx * D, centroids, k, D);
+    }
+
+    _LOG("\tUpdating centroids\n");
+    for(int i=0; i<n_samples; i++) {
+        idx = sample_indicies[i];
+        cur_cluster = cluster_cache[i];
+        centroid_counts[cur_cluster] += 1;
+        gradient_step(data + idx * D, centroids + cur_cluster * D, centroid_counts[cur_cluster], D);
+    }
+}
+
+/*
+ * Will calculate a list of n unique integers in [0,N) and fill sample_indicies
  * with the result
  */
-void generate_random_indexes(int N, int n, int *sample_indexes) {
+void generate_random_indicies(int N, int n, int *sample_indicies) {
     /* Parameters:
      *      N - size of array to pick samples from
      *      n - number of samples to pick
-     *      sample_indexes - array of the sample indexes (len(sample_indexes) == n)
+     *      sample_indicies - array of the sample indicies (len(sample_indicies) == n)
      *
-     * TODO: generate the sample indexes with a LCG
+     * TODO: generate the sample indicies with a LCG
      */
     
     for(int i=0; i<n; i++) {
         int index;
         for(int j=-1; j<i; j++) {
-            if (j == -1 || sample_indexes[j] == index) {
+            if (j == -1 || sample_indicies[j] == index) {
                 index = (int)(rand() / (double)RAND_MAX * N);
                 j = 0;
             }
         }
-        sample_indexes[i] = index;
+        sample_indicies[i] = index;
     }
 }
 
@@ -217,7 +238,7 @@ int main(void) {
     int N = 10000;
     int D = 2;
     int k = 256;
-    int n_samples = 1000;
+    int n_samples = k*3;
     int max_iter = 1000;
 
     printf("Allocating test data\n");

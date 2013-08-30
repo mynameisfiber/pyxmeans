@@ -10,13 +10,16 @@
 #define _LOG(...) do {;} while(0)
 #endif
 
-void generate_random_indexes(int N, int n, int *sample_indexes);
-void gradient_step(double *vector, double *centroid, int count, int D);
-void kmeanspp(double *data, double *centroids, int k, int N, int D);
 void minibatch(double *data, double *centroids, int n_samples, int max_iter, int k, int N, int D);
+void minibatch_iteration(double *data, double *centroids, int *sample_indicies, int *centroid_counts, int *cluster_cache, int n_samples, int k, int N, int D);
+void gradient_step(double *vector, double *centroid, int count, int D);
+
+double bayesian_information_criterion(double *data, double *centroids, int k, int N, int D);
+void kmeanspp(double *data, double *centroids, int k, int N, int D);
+void generate_random_indicies(int N, int n, int *sample_indicies);
+
 void save_double_matrix(double *data, char *filename, int N, int D);
 void save_int_matrix(int *data, char *filename, int N, int D);
-double bayesian_information_criterion(double *data, double *centroids, int k, int N, int D);
 
 #else
 #define __MINIBATCH_H

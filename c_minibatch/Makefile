@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -O3 -std=c99 -fopenmp -DVERBOSE
+CFLAGS := -O3 -std=c99 -fopenmp -DVERBOSE -Wall
 LDFLAGS := -lgomp -lc
 
 OBJECTS := $(addsuffix .o, $(basename $(wildcard *.c)))
