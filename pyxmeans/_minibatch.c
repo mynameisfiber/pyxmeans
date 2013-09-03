@@ -63,6 +63,7 @@ PyArrayObject* py_minibatch(PyObject* self, PyObject* args) {
         k, N, D
     );
 
+    Py_XINCREF(centroids);
     return centroids;
 }
 
@@ -160,6 +161,7 @@ PyArrayObject* py_kmeanspp(PyObject* self, PyObject* args) {
         k, N, D
     );
 
+    Py_XINCREF(centroids);
     return centroids;
 }
 
