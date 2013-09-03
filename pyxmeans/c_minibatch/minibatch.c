@@ -56,7 +56,7 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
     for(int i=0; i<N; i++) {
         int c = closest_centroid(data + i*D, centroids, k, D);
         centroid_count[c] += 1;
-        variance_distance += distance(data + i*D, centroids + c*D, D);
+        variance_distance += euclidian_distance(data + i*D, centroids + c*D, D);
     }
     double variance = variance_distance / (double)(N - k);
     if (variance == 0) {
@@ -198,7 +198,7 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
  */
 void kmeanspp(double *data, double *centroids, int k, int N, int D) {
     /* The first cluster is centered from a randomly chosen point in the data */
-    int index = rand() / (double)RAND_MAX * N;
+    int index = (int) (rand() / (double)RAND_MAX * N);
     for(int i=0; i<D; i++) {
         centroids[i] = data[index*D + i];
     }
@@ -247,7 +247,7 @@ int main(void) {
 
     printf("Creating synthetic data\n");
     srand((unsigned)time(NULL));
-    gaussian_data(data, 500, N, D);
+    gaussian_data(data, 20, N, D);
     kmeanspp(data, centroids, k, N, D);
 
 #ifdef DEBUG_OUTPUT

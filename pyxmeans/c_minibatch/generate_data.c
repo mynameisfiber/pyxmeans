@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <math.h>
+#include "generate_data.h"
 
 void random_matrix(double *data, int N, int D) {
     for(int i=0; i<N; i++) {
@@ -17,7 +18,7 @@ void gaussian_data(double *data, int K, int N, int D) {
         }
 
         for(int j=0; j<D; j++) {
-            double dx = center[j] - (rand() / (double)RAND_MAX - 0.5)/ 25.0;
+            double dx = center[j] - (rand() / (double)RAND_MAX - 0.5)/ 2.0;
             data[i*D + j] = exp(-1.0 * dx * dx);
         }
     }

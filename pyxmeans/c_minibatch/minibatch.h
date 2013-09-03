@@ -3,11 +3,13 @@
 #define PI (3.141592653589793)
 
 #ifdef VERBOSE
-/* macro using var args */
-#define _LOG(...) do { fprintf(stderr, "[%lu] ", time(NULL)); fprintf (stderr, ## __VA_ARGS__); } while(0)
+    /* macro using var args */
+    #include <stdio.h>
+    #include <time.h>
+    #define _LOG(...) do { fprintf(stderr, "[%lu] ", time(NULL)); fprintf (stderr, ## __VA_ARGS__); } while(0)
 #else
-/* when debug isn't defined all the macro calls do absolutely nothing */
-#define _LOG(...) do {;} while(0)
+    /* when debug isn't defined all the macro calls do absolutely nothing */
+    #define _LOG(...) do {;} while(0)
 #endif
 
 void minibatch(double *data, double *centroids, int n_samples, int max_iter, int k, int N, int D);
@@ -21,6 +23,5 @@ void generate_random_indicies(int N, int n, int *sample_indicies);
 void save_double_matrix(double *data, char *filename, int N, int D);
 void save_int_matrix(int *data, char *filename, int N, int D);
 
-#else
 #define __MINIBATCH_H
 #endif

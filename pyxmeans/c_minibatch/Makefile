@@ -1,4 +1,4 @@
-CC := gcc
+CC := llvm-gcc-4.2
 CFLAGS := -O3 -std=c99 -fopenmp -DVERBOSE -Wall
 LDFLAGS := -lgomp -lc
 

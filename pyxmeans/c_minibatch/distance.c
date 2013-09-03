@@ -1,7 +1,9 @@
+#include "distance.h"
+
 /*
  * Returns the squared euclidian distance between vectors A and B of length D
  */
-double distance(double *A, double *B, int D) {
+double euclidian_distance(double *A, double *B, int D) {
     double d = 0.0;
     double dx = 0.0;
     for (int i=0; i<D; i++) {
@@ -19,7 +21,7 @@ int closest_centroid(double *vector, double *centroids, int k, int D) {
     int c = -1;
     double min_distance, cur_distance;
     for(int i=0; i<k; i++) {
-        cur_distance = distance(vector, (centroids + i * D), D);
+        cur_distance = euclidian_distance(vector, (centroids + i * D), D);
         if (c == -1 || cur_distance < min_distance) {
             c = i;
             min_distance = cur_distance;
@@ -36,7 +38,7 @@ double distance_to_closest_centroid(double *vector, double *centroids, int k, in
     double min_distance = -1.0;
     double cur_distance;
     for(int i=0; i<k; i++) {
-        cur_distance = distance(vector, (centroids + i * D), D);
+        cur_distance = euclidian_distance(vector, (centroids + i * D), D);
         if (min_distance < 0 || cur_distance < min_distance) {
             min_distance = cur_distance;
         }
