@@ -1,6 +1,16 @@
 #include "distance.h"
 
 /*
+ * Assigns centroids to each datapoint
+ */
+void assign_centroids(double *data, double *centroids, int *assignments, int k, int N, int D) {
+    for(int i=0; i<N; i++) {
+        assignments[i] = closest_centroid(data + i*D, centroids, k, D);
+    }
+}
+
+
+/*
  * Returns the squared euclidian distance between vectors A and B of length D
  */
 double euclidian_distance(double *A, double *B, int D) {

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <omp.h>
 
 #include "minibatch.h"
 #include "generate_data.h"
@@ -83,6 +84,71 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
 
     free(centroid_count);
     return bic;
+}
+
+/*
+ * Runs multiple minibatches (as given by n_runs) and returns the centroids
+ * that have the best BIC
+ */
+void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, int k, int N, int D) {
+    double *all_centroids;
+    double *all_bics;
+    
+    if (n_jobs > 1) {
+        all_centroids = (double*) malloc(k * D * n_jobs * sizeof(double));
+        all_bics = (double*) malloc(n_jobs * sizeof(double));
+    } else {
+        all_centroids = centroids;
+        all_bics = (double*) malloc(sizeof(double));
+    }
+
+    #pragma omp parallel shared(all_centroids) num_threads(n_jobs)
+    {
+        int id = omp_get_thread_num();
+        double lowest_bic, cur_bic;
+        double *current_centroid = (double*) malloc(k * D * sizeof(double));
+
+        #pragma omp for
+        for(int i=0; i<n_runs; i++) {
+            for(int j=0; i<k*D; i++) {
+                current_centroid[j] = centroids[j];
+            }
+
+            minibatch(data, current_centroid, n_samples, max_iter, k, N, D);
+            cur_bic = bayesian_information_criterion(data, current_centroid, k, N, D);
+
+            if (cur_bic < lowest_bic) {
+                lowest_bic = cur_bic;
+                all_bics[id] = cur_bic;
+                for(int j=0; j<k*D; j++) {
+                    all_centroids[id * D * k + j] = current_centroid[j];
+                }
+            }
+        }
+        free(current_centroid);
+        _LOG("Thread %d is done\n", id);
+    }
+
+    if (n_jobs > 1) {
+        double min_bic;
+        int min_bic_index;
+        _LOG("Finding min BIC\n");
+        for(int i=0; i<n_jobs; i++) {
+            _LOG("BIC[%d] = %f\n", i, all_bics[i]);
+            if (i == 0 || all_bics[i] < min_bic) {
+                min_bic = all_bics[i];
+                min_bic_index = i;
+            }
+        }
+        _LOG("Min BIC = %f\n", min_bic);
+
+        for(int i=0; i<k*D; i++) {
+            centroids[i] = all_centroids[min_bic_index*k*D + i];
+        }
+    }
+
+    free(all_centroids);
+    free(all_bics);
 }
 
 
@@ -255,7 +321,8 @@ int main(void) {
 #endif
 
     clock_t start_clock = clock();
-    minibatch(data, centroids, n_samples, max_iter, k, N, D);
+    /*minibatch(data, centroids, n_samples, max_iter, k, N, D);*/
+    minibatch_multi(data, centroids, n_samples, max_iter, 10, 4, k, N, D);
     clock_t end_clock = clock();
     printf("BIC of resulting model: %f\n", bayesian_information_criterion(data, centroids, k, N, D));
     printf("Time to run: %fs\n", (end_clock - start_clock) / (double)CLOCKS_PER_SEC);

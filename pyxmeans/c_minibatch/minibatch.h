@@ -12,6 +12,7 @@
     #define _LOG(...) do {;} while(0)
 #endif
 
+void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, int k, int N, int D);
 void minibatch(double *data, double *centroids, int n_samples, int max_iter, int k, int N, int D);
 void minibatch_iteration(double *data, double *centroids, int *sample_indicies, int *centroid_counts, int *cluster_cache, int n_samples, int k, int N, int D);
 void gradient_step(double *vector, double *centroid, int count, int D);
