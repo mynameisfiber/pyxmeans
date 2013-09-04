@@ -17,8 +17,10 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, dou
 void minibatch_iteration(double *data, double *centroids, int *sample_indicies, int *centroid_counts, int *cluster_cache, int n_samples, int k, int N, int D);
 void gradient_step(double *vector, double *centroid, int count, int D);
 
+double model_variance(double *data, double *centroids, int k, int N, int D);
 double bayesian_information_criterion(double *data, double *centroids, int k, int N, int D);
 void kmeanspp(double *data, double *centroids, int k, int N, int D);
+void kmeanspp_multi(double *data, double *centroids, int n_runs, int n_jobs, int k, int N, int D);
 void generate_random_indicies(int N, int n, int *sample_indicies);
 
 void save_double_matrix(double *data, char *filename, int N, int D);

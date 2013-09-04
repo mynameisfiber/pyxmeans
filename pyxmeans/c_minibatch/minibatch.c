@@ -44,6 +44,22 @@ void gradient_step(double *vector, double *centroid, int count, int D) {
     }
 }
 
+/* 
+ * Calculate the variance of the model given the current centroids
+ */
+double model_variance(double *data, double *centroids, int k, int N, int D) {
+    double variance_distance = 0.0;
+    for(int i=0; i<N; i++) {
+        int c = closest_centroid(data + i*D, centroids, k, D);
+        variance_distance += euclidian_distance(data + i*D, centroids + c*D, D);
+    }
+    double variance = variance_distance / (double)(N - k);
+    if (variance == 0) {
+        variance = nextafter(0, 1);
+    }
+    return variance;
+}
+
 /*
  * Calculates the bayesian information criterion for clustered data which
  * represents how good a model the centroids represents.
@@ -89,68 +105,129 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
 }
 
 /*
- * Runs multiple minibatches (as given by n_runs) and returns the centroids
- * that have the best BIC
+ * Runs multiple kmeanspp (as given by n_runs) and returns the centroids
+ * that have the best variance
  */
-void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, double bic_ratio_termination, int k, int N, int D) {
+void kmeanspp_multi(double *data, double *centroids, int n_runs, int n_jobs, int k, int N, int D) {
     double *all_centroids;
-    double *all_bics;
+    double *all_variances = (double*) malloc(n_jobs * sizeof(double));
     
     if (n_jobs > 1) {
         all_centroids = (double*) malloc(k * D * n_jobs * sizeof(double));
-        all_bics = (double*) malloc(n_jobs * sizeof(double));
     } else {
         all_centroids = centroids;
-        all_bics = (double*) malloc(sizeof(double));
     }
 
-    #pragma omp parallel shared(all_centroids) num_threads(n_jobs)
+    #pragma omp parallel shared(all_centroids, all_variances, data) num_threads(n_jobs)
     {
         int id = omp_get_thread_num();
-        double lowest_bic, cur_bic;
+        double minimum_variance, cur_variance;
         double *current_centroid = (double*) malloc(k * D * sizeof(double));
+        int local_iter = 0;
 
         #pragma omp for
         for(int i=0; i<n_runs; i++) {
-            for(int j=0; i<k*D; i++) {
-                current_centroid[j] = centroids[j];
-            }
+            kmeanspp(data, current_centroid, k, N, D);
+            cur_variance = model_variance(data, current_centroid, k, N, D);
 
-            minibatch(data, current_centroid, n_samples, max_iter, bic_ratio_termination, k, N, D);
-            cur_bic = bayesian_information_criterion(data, current_centroid, k, N, D);
-
-            if (cur_bic < lowest_bic) {
-                lowest_bic = cur_bic;
-                all_bics[id] = cur_bic;
+            if (local_iter == 0 || cur_variance < minimum_variance) {
+                minimum_variance = cur_variance;
+                all_variances[id] = cur_variance;
                 for(int j=0; j<k*D; j++) {
                     all_centroids[id * D * k + j] = current_centroid[j];
                 }
             }
+            local_iter++;
         }
         free(current_centroid);
         _LOG("Thread %d is done\n", id);
     }
 
     if (n_jobs > 1) {
-        double min_bic;
-        int min_bic_index;
-        _LOG("Finding min BIC\n");
+        double min_variance;
+        int min_variance_index;
+        _LOG("Finding min variance\n");
         for(int i=0; i<n_jobs; i++) {
-            _LOG("BIC[%d] = %f\n", i, all_bics[i]);
-            if (i == 0 || all_bics[i] < min_bic) {
-                min_bic = all_bics[i];
-                min_bic_index = i;
+            _LOG("variance[%d] = %f\n", i, all_variances[i]);
+            if (i == 0 || all_variances[i] < min_variance) {
+                min_variance = all_variances[i];
+                min_variance_index = i;
             }
         }
-        _LOG("Min BIC = %f\n", min_bic);
+        _LOG("Min variance = %f\n", min_variance);
 
         for(int i=0; i<k*D; i++) {
-            centroids[i] = all_centroids[min_bic_index*k*D + i];
+            centroids[i] = all_centroids[min_variance_index*k*D + i];
         }
     }
 
     free(all_centroids);
-    free(all_bics);
+    free(all_variances);
+}
+
+/*
+ * Runs multiple minibatches (as given by n_runs) and returns the centroids
+ * that have the best variance
+ */
+void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, double bic_ratio_termination, int k, int N, int D) {
+    double *all_centroids;
+    double *all_variances = (double*) malloc(n_jobs * sizeof(double));
+    
+    if (n_jobs > 1) {
+        all_centroids = (double*) malloc(k * D * n_jobs * sizeof(double));
+    } else {
+        all_centroids = centroids;
+    }
+
+    #pragma omp parallel shared(all_centroids, all_variances, data) num_threads(n_jobs)
+    {
+        int id = omp_get_thread_num();
+        double minimum_variance, cur_variance;
+        double *current_centroid = (double*) malloc(k * D * sizeof(double));
+        int local_iter = 0;
+
+        #pragma omp for
+        for(int i=0; i<n_runs; i++) {
+            for(int j=0; j<k*D; j++) {
+                current_centroid[j] = centroids[j];
+            }
+
+            minibatch(data, current_centroid, n_samples, max_iter, bic_ratio_termination, k, N, D);
+            cur_variance = model_variance(data, current_centroid, k, N, D);
+
+            if (local_iter == 0 || cur_variance < minimum_variance) {
+                minimum_variance = cur_variance;
+                all_variances[id] = cur_variance;
+                for(int j=0; j<k*D; j++) {
+                    all_centroids[id * D * k + j] = current_centroid[j];
+                }
+            }
+            local_iter++;
+        }
+        free(current_centroid);
+        _LOG("Thread %d is done\n", id);
+    }
+
+    if (n_jobs > 1) {
+        double min_variance;
+        int min_variance_index;
+        _LOG("Finding min variance\n");
+        for(int i=0; i<n_jobs; i++) {
+            _LOG("variance[%d] = %f\n", i, all_variances[i]);
+            if (i == 0 || all_variances[i] < min_variance) {
+                min_variance = all_variances[i];
+                min_variance_index = i;
+            }
+        }
+        _LOG("Min variance = %f\n", min_variance);
+
+        for(int i=0; i<k*D; i++) {
+            centroids[i] = all_centroids[min_variance_index*k*D + i];
+        }
+    }
+
+    free(all_centroids);
+    free(all_variances);
 }
 
 
@@ -280,11 +357,12 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
      * TODO: generate the sample indicies with a LCG
      */
     
+    unsigned int seed = time(NULL) * omp_get_thread_num();
     for(int i=0; i<n; i++) {
         int index;
         for(int j=-1; j<i; j++) {
             if (j == -1 || sample_indicies[j] == index) {
-                index = (int)(rand() / (double)RAND_MAX * N);
+                index = (int)(rand_r(&seed) / (double)RAND_MAX * N);
                 j = 0;
             }
         }
@@ -297,7 +375,9 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
  */
 void kmeanspp(double *data, double *centroids, int k, int N, int D) {
     /* The first cluster is centered from a randomly chosen point in the data */
-    int index = (int) (rand() / (double)RAND_MAX * N);
+    unsigned int seed = time(NULL) * omp_get_thread_num();
+
+    int index = (int) (rand_r(&seed) / (double)RAND_MAX * N);
     for(int i=0; i<D; i++) {
         centroids[i] = data[index*D + i];
     }
@@ -318,7 +398,7 @@ void kmeanspp(double *data, double *centroids, int k, int N, int D) {
         }
         
         int index;
-        double d = rand() / (double)RAND_MAX * total_distance2;
+        double d = rand_r(&seed) / (double)RAND_MAX * total_distance2;
         for(index = 0; index < N && d > 0; index++) {
             d -= distances[index];
         }
@@ -345,7 +425,6 @@ int main(void) {
     double *centroids = (double*) malloc(k * D * sizeof(double));
 
     printf("Creating synthetic data\n");
-    srand((unsigned)time(NULL));
     gaussian_data(data, 20, N, D);
     kmeanspp(data, centroids, k, N, D);
 
