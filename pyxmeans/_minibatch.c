@@ -83,9 +83,9 @@ PyArrayObject* py_assign_centroids(PyObject* self, PyObject* args) {
 PyArrayObject* py_minibatch_multi(PyObject* self, PyObject* args) {
     PyArrayObject* data;
     PyArrayObject* centroids;
-    int n_samples, max_iter, n_runs, n_jobs;
+    int bic_ratio_termination, n_samples, max_iter, n_runs, n_jobs;
 
-    if (!PyArg_ParseTuple(args, "OOiiii", &data, &centroids, &n_samples, &max_iter, &n_runs, &n_jobs)) { 
+    if (!PyArg_ParseTuple(args, "OOiiiid", &data, &centroids, &n_samples, &max_iter, &n_runs, &n_jobs, &bic_ratio_termination)) { 
         PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
@@ -130,6 +130,7 @@ PyArrayObject* py_minibatch_multi(PyObject* self, PyObject* args) {
         max_iter,
         n_runs,
         n_jobs,
+        bic_ratio_termination,
         k, N, D
     );
 
@@ -140,9 +141,9 @@ PyArrayObject* py_minibatch_multi(PyObject* self, PyObject* args) {
 PyArrayObject* py_minibatch(PyObject* self, PyObject* args) {
     PyArrayObject* data;
     PyArrayObject* centroids;
-    int n_samples, max_iter;
+    int bic_ratio_termination, n_samples, max_iter;
 
-    if (!PyArg_ParseTuple(args, "OOii", &data, &centroids, &n_samples, &max_iter)) { 
+    if (!PyArg_ParseTuple(args, "OOiid", &data, &centroids, &n_samples, &max_iter, &bic_ratio_termination)) { 
         PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
@@ -185,6 +186,7 @@ PyArrayObject* py_minibatch(PyObject* self, PyObject* args) {
         PyArray_DATA(centroids), 
         n_samples,
         max_iter,
+        bic_ratio_termination,
         k, N, D
     );
 

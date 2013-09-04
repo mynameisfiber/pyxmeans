@@ -8,6 +8,8 @@
 #include "generate_data.h"
 #include "distance.h"
 
+#define EARLY_TERM_WINDOW (10)
+
 void save_double_matrix(double *data, char *filename, int N, int D) {
     FILE *fd = fopen(filename, "w+");
     for(int i=0; i<N; i++) {
@@ -90,7 +92,7 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
  * Runs multiple minibatches (as given by n_runs) and returns the centroids
  * that have the best BIC
  */
-void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, int k, int N, int D) {
+void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, double bic_ratio_termination, int k, int N, int D) {
     double *all_centroids;
     double *all_bics;
     
@@ -114,7 +116,7 @@ void minibatch_multi(double *data, double *centroids, int n_samples, int max_ite
                 current_centroid[j] = centroids[j];
             }
 
-            minibatch(data, current_centroid, n_samples, max_iter, k, N, D);
+            minibatch(data, current_centroid, n_samples, max_iter, bic_ratio_termination, k, N, D);
             cur_bic = bayesian_information_criterion(data, current_centroid, k, N, D);
 
             if (cur_bic < lowest_bic) {
@@ -157,7 +159,7 @@ void minibatch_multi(double *data, double *centroids, int n_samples, int max_ite
  * should already be initialized and each batch will consist of n_samples
  * samples from the data.
  */
-void minibatch(double *data, double *centroids, int n_samples, int max_iter, int k, int N, int D)  {
+void minibatch(double *data, double *centroids, int n_samples, int max_iter, double bic_ratio_termination, int k, int N, int D)  {
     // assert(k < n_samples < N)
     // assert(data.shape == (N, D)
     // assert(centoids.shape == (k, D)
@@ -166,6 +168,13 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, int
     int *sample_indicies = (int*) malloc(n_samples * sizeof(int));
     int *centroid_counts = (int*) malloc(k * sizeof(int));
     int *cluster_cache = (int*) malloc(n_samples * sizeof(int));
+
+    double current_bic, bic_sum;
+    double *historical_bic;
+    int historical_bic_idx = 0;
+    if (bic_ratio_termination > 0.0) {
+        historical_bic = (double*) malloc(EARLY_TERM_WINDOW  * sizeof(double));
+    }
 
     for (int i=0; i<k; i++) {
         centroid_counts[i] = 0;
@@ -180,6 +189,26 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, int
 
         minibatch_iteration(data, centroids, sample_indicies, centroid_counts, cluster_cache, n_samples, k, N, D);
 
+        if (bic_ratio_termination > 0.0) {
+            _LOG("\tChecking for early termination condition\n");
+            current_bic = bayesian_information_criterion(data, centroids, k, N, D);
+            if (iter > EARLY_TERM_WINDOW) {
+                _LOG("Current bic ratio: %f\n", fabs(1.0 - current_bic * EARLY_TERM_WINDOW / bic_sum));
+                if (fabs(1.0 - current_bic * EARLY_TERM_WINDOW / bic_sum) < bic_ratio_termination) {
+                    _LOG("Finishing early at iteration %d. ratio = %f, threshold = %f\n", 
+                            iter, 
+                            fabs(1.0 - current_bic * EARLY_TERM_WINDOW / bic_sum), 
+                            bic_ratio_termination
+                    );
+                    break;
+                }
+            }
+
+            bic_sum += current_bic;
+            bic_sum -= historical_bic[historical_bic_idx];
+            historical_bic[historical_bic_idx] = current_bic;
+            historical_bic_idx = (historical_bic_idx + 1) % EARLY_TERM_WINDOW;
+        }
 #ifdef DEBUG_OUTPUT
         char filename[128];
         sprintf(filename, "data/centroids-%02d.dat", iter);
@@ -197,6 +226,10 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, int
     free(centroid_counts);
     free(sample_indicies);
     free(cluster_cache);
+
+    if (bic_ratio_termination > 0.0) {
+        free(historical_bic);
+    }
 }
 
 /*
@@ -321,8 +354,8 @@ int main(void) {
 #endif
 
     clock_t start_clock = clock();
-    /*minibatch(data, centroids, n_samples, max_iter, k, N, D);*/
-    minibatch_multi(data, centroids, n_samples, max_iter, 10, 4, k, N, D);
+    minibatch(data, centroids, n_samples, max_iter, 0.001, k, N, D);
+    /*minibatch_multi(data, centroids, n_samples, max_iter, 10, 4, -1.0, k, N, D);*/
     clock_t end_clock = clock();
     printf("BIC of resulting model: %f\n", bayesian_information_criterion(data, centroids, k, N, D));
     printf("Time to run: %fs\n", (end_clock - start_clock) / (double)CLOCKS_PER_SEC);

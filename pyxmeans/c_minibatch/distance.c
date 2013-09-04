@@ -9,7 +9,6 @@ void assign_centroids(double *data, double *centroids, int *assignments, int k, 
     }
 }
 
-
 /*
  * Returns the squared euclidian distance between vectors A and B of length D
  */
