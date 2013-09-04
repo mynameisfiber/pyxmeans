@@ -36,13 +36,16 @@ def error(actual, test):
 
 if __name__ == "__main__":
     print "Creating data"
-    N = 5000
+    N = 10000
     D = 2
-    k = 24
+    k = 48
 
     data, actual = generate_data(N, D, k, sigma=0.0005)
     actual_data = np.asarray([x["mean"] for x in actual])
     clusters = _minibatch.kmeanspp_multi(data, np.empty((k, D)), 20, 4)
+    print "Number of points: ", N
+    print "Number of dimensions: ", D
+    print "Number of clusters: ", k
     print "initial BIC: ", _minibatch.bic(data, clusters)
     print "initial variance: ", _minibatch.model_variance(data, clusters)
     print
@@ -66,20 +69,25 @@ if __name__ == "__main__":
     print
 
     print "Clustering with sklearn"
-    clusters_sklearn = clusters.copy()
-    with TimerBlock("singlethreaded pyxmeans"):
-        mbkmv = MiniBatchKMeans(k, max_iter=100, batch_size=k*5, init=clusters_sklearn, reassignment_ratio=0, compute_labels=False, max_no_improvement=None).fit(data)
-    print "BIC of sklearn: ", _minibatch.bic(data, mbkmv.cluster_centers_)
-    print "Variance of sklearn: ", _minibatch.model_variance(data, mbkmv.cluster_centers_)
-    print "RMS Error: ", error(actual_data, clusters_sklearn)
+    if MiniBatchKMeans:
+        clusters_sklearn = clusters.copy()
+        with TimerBlock("singlethreaded pyxmeans"):
+            mbkmv = MiniBatchKMeans(k, max_iter=100, batch_size=k*5, init=clusters_sklearn, reassignment_ratio=0, compute_labels=False, max_no_improvement=None).fit(data)
+        print "BIC of sklearn: ", _minibatch.bic(data, mbkmv.cluster_centers_)
+        print "Variance of sklearn: ", _minibatch.model_variance(data, mbkmv.cluster_centers_)
+        print "RMS Error: ", error(actual_data, clusters_sklearn)
+    else:
+        print "sklearn not found"
 
 
     py.figure()
+    py.title("pyxmeans performance")
     py.scatter(data[:,0], data[:,1], label="data")
     py.scatter(actual_data[:,0], actual_data[:,1], c='r', s=75, alpha=0.75, label="actual center")
     py.scatter(clusters_pymeans_single[:,0], clusters_pymeans_single[:,1], c='m', s=75, alpha=0.75, label="pymeans single")
     py.scatter(clusters_pymeans_multi[:,0], clusters_pymeans_multi[:,1], c='y', s=75, alpha=0.75, label="pymeans multi")
-    py.scatter(clusters_sklearn[:,0], clusters_sklearn[:,1], s=75, c='g', alpha=0.75, label="sklearn")
+    if MiniBatchKMeans:
+        py.scatter(clusters_sklearn[:,0], clusters_sklearn[:,1], s=75, c='g', alpha=0.75, label="sklearn")
     py.legend()
 
     py.show()

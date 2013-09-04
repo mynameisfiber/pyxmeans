@@ -6,42 +6,46 @@ type clustering with an unknown number of clusters.  In order to make this code
 runnable, I chose to use MiniBatchKMeans instead of KMeans, but they should be
 swappable. 
 
-**Currently** it only supports basic MiniBatch kmeans and does not yet do XMeans.  However, the MiniBatch implementation is exceedingly fast and uses a small memory footprint.  On my 2011 MacBook Air, the following benchmarks were obtained:
+**Currently** it only supports basic MiniBatch kmeans and does not yet do
+XMeans.  However, the MiniBatch implementation is exceedingly fast and uses a
+small memory footprint.  On my 2011 MacBook Air, the following benchmarks were
+obtained (by running `python -m pyxmeans.benchmark`):
 
 ```
-In [1]: from sklearn.cluster import MiniBatchKMeans
+Creating data
+Number of points:  10000
+Number of dimensions:  2
+Number of clusters:  48
+initial BIC:  -54533.9853416
+initial variance:  0.00119839264405
 
-In [2]: from pyxmeans import _minibatch
+Clustering with single-threaded pyxmeans
+singlethreaded pyxmeans took 0.018506s
+BIC of single-threaded pyxmeans:  -54556.7397626
+Variance of single-threaded pyxmeans:  0.000896105585028
+RMS Error:  3.66005961722
 
-In [3]: from pyxmeans.text import generate_data
+Clustering with multi-threaded pyxmeans
+singlethreaded pyxmeans took 0.043338s
+BIC of multi-threaded pyxmeans:  -54951.6477002
+Variance of multi-threaded pyxmeans:  0.000840786730204
+RMS Error:  3.66460410732
 
-# Generate data with 50000 2D samples belonging to 128 gaussians
-In [9]: data, actual = generate_data(50000, 2, 128, 0.0005)
-
-
-In [28]: %%timeit 
-   ....: clusters = np.empty((128,2))
-   ....: clusters = _minibatch.kmeanspp(data, clusters)
-   ....: _minibatch.minibatch(data, clusters, 128*5, 100)
-   ....:
-   1 loops, best of 3: 2.15 s per loop
-
-
-In [30]: %%timeit 
-   ....: clusters = np.empty((128,2))
-   ....: clusters = _minibatch.kmeanspp(data, clusters)
-   ....: _minibatch.minibatch_multi(data, clusters, 128*5, 100, 4, 4)
-   ....:
-   1 loops, best of 3: 2.31 s per loop
-   
-
-In [31]: %%timeit
-   ....: kmv = MiniBatchKMeans(128, max_iter=100, batch_size=128*5, n_init=1, compute_labels=False, max_no_improvement=None).fit(data)
-   ....:
-   1 loops, best of 3: 88.7 s per loop
+Clustering with sklearn
+singlethreaded pyxmeans took 29.838236s
+BIC of sklearn:  -55225.3186563
+Variance of sklearn:  0.000682348816436
+RMS Error:  3.66329123839
 ```
 
-NOTE: `max_no_improvement` is set to `None` for MiniBatchKMeans to properly compare per-iteration speeds since we currently do not support early-stopping.
+![](benchmark.png)
+
+NOTES: 
+    * `max_no_improvement` is set to `None` for MiniBatchKMeans to properly
+      compare per-iteration speeds since we currently do not support
+      early-stopping.
+    * RMS Error for the multi-threaded pymeans is higher because that function
+      aims at minimizing the variance of the resulting model.
 
 
 
