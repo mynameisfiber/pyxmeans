@@ -393,7 +393,7 @@ void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int 
     for(int c=1; c<k; c++) {
         total_distance2 = 0.0;
         
-        generate_random_indicies(n_samples, N, sample_indicies);
+        generate_random_indicies(N, n_samples, sample_indicies);
         for(int i=0; i<n_samples; i++) {
             int idx = sample_indicies[i];
             distance = distance_to_closest_centroid(data + D*idx, centroids, c, D);
@@ -432,7 +432,7 @@ int main(void) {
 
     printf("Creating synthetic data\n");
     gaussian_data(data, 20, N, D);
-    kmeanspp(data, centroids, N, k, N/100, D);
+    kmeanspp(data, centroids, N/100, k, N, D);
 
 #ifdef DEBUG_OUTPUT
     save_double_matrix(data, "data/cluster_data.dat", N, D);

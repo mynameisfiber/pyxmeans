@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     data, actual = generate_data(N, D, k, sigma=0.0005)
     actual_data = np.asarray([x["mean"] for x in actual])
-    clusters = _minibatch.kmeanspp_multi(data, np.empty((k, D)), 20, 4)
+    clusters = _minibatch.kmeanspp_multi(data, np.empty((k, D)), N / 100, 20, 4)
     print "Number of points: ", N
     print "Number of dimensions: ", D
     print "Number of clusters: ", k
