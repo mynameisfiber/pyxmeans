@@ -301,9 +301,9 @@ PyObject* py_bic(PyObject* self, PyObject* args) {
 PyArrayObject* py_kmeanspp_multi(PyObject* self, PyObject* args) {
     PyArrayObject* data;
     PyArrayObject* centroids;
-    int n_runs, n_jobs;
+    int n_samples, n_runs, n_jobs;
 
-    if (!PyArg_ParseTuple(args, "OOii", &data, &centroids, &n_runs, &n_jobs)) { 
+    if (!PyArg_ParseTuple(args, "OOiii", &data, &centroids, &n_samples, &n_runs, &n_jobs)) { 
         PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
@@ -332,6 +332,10 @@ PyArrayObject* py_kmeanspp_multi(PyObject* self, PyObject* args) {
     const int D = (int) PyArray_DIM(data, 1);
     const int k = (int) PyArray_DIM(centroids, 0);
 
+    if (n_samples >= N) {
+        PyErr_SetString(PyExc_RuntimeError,"n_samples must be smaller than the number of samples");
+        return NULL;
+    }
     if (PyArray_DIM(centroids, 1) != D) {
         PyErr_SetString(PyExc_RuntimeError,"centroids has wrong number of features.");
         return NULL;
@@ -340,6 +344,7 @@ PyArrayObject* py_kmeanspp_multi(PyObject* self, PyObject* args) {
     kmeanspp_multi(
         PyArray_DATA(data), 
         PyArray_DATA(centroids), 
+        n_samples,
         n_runs,
         n_jobs,
         k, N, D
@@ -353,8 +358,9 @@ PyArrayObject* py_kmeanspp_multi(PyObject* self, PyObject* args) {
 PyArrayObject* py_kmeanspp(PyObject* self, PyObject* args) {
     PyArrayObject* data;
     PyArrayObject* centroids;
+    int n_samples;
 
-    if (!PyArg_ParseTuple(args, "OO", &data, &centroids)) { 
+    if (!PyArg_ParseTuple(args, "OOi", &data, &centroids, &n_samples)) { 
         PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
@@ -383,6 +389,10 @@ PyArrayObject* py_kmeanspp(PyObject* self, PyObject* args) {
     const int D = (int) PyArray_DIM(data, 1);
     const int k = (int) PyArray_DIM(centroids, 0);
 
+    if (n_samples >= N) {
+        PyErr_SetString(PyExc_RuntimeError,"n_samples must be smaller than the number of samples");
+        return NULL;
+    }
     if (PyArray_DIM(centroids, 1) != D) {
         PyErr_SetString(PyExc_RuntimeError,"centroids has wrong number of features.");
         return NULL;
@@ -391,6 +401,7 @@ PyArrayObject* py_kmeanspp(PyObject* self, PyObject* args) {
     kmeanspp(
         PyArray_DATA(data), 
         PyArray_DATA(centroids), 
+        n_samples,
         k, N, D
     );
 

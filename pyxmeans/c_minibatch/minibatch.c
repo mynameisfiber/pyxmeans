@@ -108,7 +108,7 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
  * Runs multiple kmeanspp (as given by n_runs) and returns the centroids
  * that have the best variance
  */
-void kmeanspp_multi(double *data, double *centroids, int n_runs, int n_jobs, int k, int N, int D) {
+void kmeanspp_multi(double *data, double *centroids, int n_samples, int n_runs, int n_jobs, int k, int N, int D) {
     double *all_centroids;
     double *all_variances = (double*) malloc(n_jobs * sizeof(double));
     
@@ -127,7 +127,7 @@ void kmeanspp_multi(double *data, double *centroids, int n_runs, int n_jobs, int
 
         #pragma omp for
         for(int i=0; i<n_runs; i++) {
-            kmeanspp(data, current_centroid, k, N, D);
+            kmeanspp(data, current_centroid, n_samples, k, N, D);
             cur_variance = model_variance(data, current_centroid, k, N, D);
 
             if (local_iter == 0 || cur_variance < minimum_variance) {
@@ -362,7 +362,7 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
         int index;
         for(int j=-1; j<i; j++) {
             if (j == -1 || sample_indicies[j] == index) {
-                index = (int)(rand_r(&seed) / (double)RAND_MAX * N);
+                index = rand_r(&seed) % (N - 1);
                 j = 0;
             }
         }
@@ -373,7 +373,7 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
 /*
  * Initialize centroids using the k-means++ algorithm over the given data.
  */
-void kmeanspp(double *data, double *centroids, int k, int N, int D) {
+void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int D) {
     /* The first cluster is centered from a randomly chosen point in the data */
     unsigned int seed = time(NULL) * omp_get_thread_num();
 
@@ -388,11 +388,15 @@ void kmeanspp(double *data, double *centroids, int k, int N, int D) {
      * closest centroid
      */
     double distance, total_distance2;
-    double *distances = (double*) malloc(N * sizeof(double));
+    double *distances = (double*) malloc(n_samples * sizeof(double));
+    int *sample_indicies = (int*) malloc(n_samples * sizeof(int));
     for(int c=1; c<k; c++) {
         total_distance2 = 0.0;
-        for(int i=0; i<N; i++) {
-            distance = distance_to_closest_centroid(data + D*i, centroids, c, D);
+        
+        generate_random_indicies(n_samples, N, sample_indicies);
+        for(int i=0; i<n_samples; i++) {
+            int idx = sample_indicies[i];
+            distance = distance_to_closest_centroid(data + D*idx, centroids, c, D);
             distances[i] = distance;
             total_distance2 += distance * distance;
         }
@@ -404,12 +408,14 @@ void kmeanspp(double *data, double *centroids, int k, int N, int D) {
         }
         index--;
             
+        int data_index = sample_indicies[index];
         for(int i=0; i<D; i++) {
-            centroids[c*D + i] = data[index*D + i];
+            centroids[c*D + i] = data[data_index*D + i];
         }
     }
 
     free(distances);
+    free(sample_indicies);
 }
 
 
@@ -426,7 +432,7 @@ int main(void) {
 
     printf("Creating synthetic data\n");
     gaussian_data(data, 20, N, D);
-    kmeanspp(data, centroids, k, N, D);
+    kmeanspp(data, centroids, N, k, N/100, D);
 
 #ifdef DEBUG_OUTPUT
     save_double_matrix(data, "data/cluster_data.dat", N, D);
