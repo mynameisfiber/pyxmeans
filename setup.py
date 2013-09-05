@@ -1,7 +1,7 @@
 from distutils.core import setup, Extension
 import numpy.distutils.misc_util
 
-__version__ = "0.5.3"
+__version__ = "0.5.4"
 
 _minibatch = Extension(
     'pyxmeans._minibatch',

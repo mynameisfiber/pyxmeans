@@ -357,7 +357,7 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
      * TODO: generate the sample indicies with a LCG
      */
     
-    unsigned int seed = time(NULL) * omp_get_thread_num();
+    unsigned int seed = clock() * omp_get_thread_num();
     for(int i=0; i<n; i++) {
         int index;
         for(int j=-1; j<i; j++) {
@@ -375,7 +375,7 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
  */
 void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int D) {
     /* The first cluster is centered from a randomly chosen point in the data */
-    unsigned int seed = time(NULL) * omp_get_thread_num();
+    unsigned int seed = clock() * omp_get_thread_num();
 
     int index = (int) (rand_r(&seed) / (double)RAND_MAX * N);
     for(int i=0; i<D; i++) {

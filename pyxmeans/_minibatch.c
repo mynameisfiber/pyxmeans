@@ -26,8 +26,9 @@ PyArrayObject* py_assign_centroids(PyObject* self, PyObject* args) {
     PyArrayObject* data;
     PyArrayObject* centroids;
     PyArrayObject* assignments;
+    int n_jobs;
 
-    if (!PyArg_ParseTuple(args, "OOO", &data, &centroids, &assignments)) { 
+    if (!PyArg_ParseTuple(args, "OOOi", &data, &centroids, &assignments, &n_jobs)) { 
         PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
@@ -73,10 +74,11 @@ PyArrayObject* py_assign_centroids(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    assign_centroids(
+    assign_centroids_multi(
         PyArray_DATA(data), 
         PyArray_DATA(centroids), 
         PyArray_DATA(assignments), 
+        n_jobs,
         k, N, D
     );
 

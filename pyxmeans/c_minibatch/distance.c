@@ -4,6 +4,14 @@
  * Assigns centroids to each datapoint
  */
 void assign_centroids(double *data, double *centroids, int *assignments, int k, int N, int D) {
+    assign_centroids_multi(data, centroids, assignments, 1, k, N, D);
+}
+
+/*
+ * Assigns centroids to each datapoint using multiple threads
+ */
+void assign_centroids_multi(double *data, double *centroids, int *assignments, int n_jobs, int k, int N, int D) {
+    #pragma omp parallel shared(data, centroids, assignments) num_threads(n_jobs)
     for(int i=0; i<N; i++) {
         assignments[i] = closest_centroid(data + i*D, centroids, k, D);
     }
