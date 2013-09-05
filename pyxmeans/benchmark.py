@@ -83,11 +83,11 @@ if __name__ == "__main__":
     py.figure()
     py.title("pyxmeans performance")
     py.scatter(data[:,0], data[:,1], label="data")
-    py.scatter(actual_data[:,0], actual_data[:,1], c='r', s=75, alpha=0.75, label="actual center")
     py.scatter(clusters_pymeans_single[:,0], clusters_pymeans_single[:,1], c='m', s=75, alpha=0.75, label="pymeans single")
     py.scatter(clusters_pymeans_multi[:,0], clusters_pymeans_multi[:,1], c='y', s=75, alpha=0.75, label="pymeans multi")
     if MiniBatchKMeans:
         py.scatter(clusters_sklearn[:,0], clusters_sklearn[:,1], s=75, c='g', alpha=0.75, label="sklearn")
+    py.scatter(actual_data[:,0], actual_data[:,1], c='r', s=75, alpha=0.75, label="actual center")
     py.legend()
 
     py.show()

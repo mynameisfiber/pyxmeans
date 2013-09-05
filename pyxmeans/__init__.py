@@ -1,3 +1,3 @@
-from _minibatch import minibatch, bic, kmeanspp
+from _minibatch import *
 import benchmark
 
