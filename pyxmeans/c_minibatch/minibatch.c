@@ -345,32 +345,6 @@ void minibatch_iteration(double *data, double *centroids, int *sample_indicies, 
 }
 
 /*
- * Will calculate a list of n unique integers in [0,N) and fill sample_indicies
- * with the result
- */
-void generate_random_indicies(int N, int n, int *sample_indicies) {
-    /* Parameters:
-     *      N - size of array to pick samples from
-     *      n - number of samples to pick
-     *      sample_indicies - array of the sample indicies (len(sample_indicies) == n)
-     *
-     * TODO: generate the sample indicies with a LCG
-     */
-    
-    unsigned int seed = clock() * omp_get_thread_num();
-    for(int i=0; i<n; i++) {
-        int index;
-        for(int j=-1; j<i; j++) {
-            if (j == -1 || sample_indicies[j] == index) {
-                index = rand_r(&seed) % (N - 1);
-                j = 0;
-            }
-        }
-        sample_indicies[i] = index;
-    }
-}
-
-/*
  * Initialize centroids using the k-means++ algorithm over the given data.
  */
 void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int D) {
