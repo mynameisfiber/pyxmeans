@@ -349,7 +349,7 @@ void minibatch_iteration(double *data, double *centroids, int *sample_indicies, 
  */
 void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int D) {
     /* The first cluster is centered from a randomly chosen point in the data */
-    unsigned int seed = clock() * omp_get_thread_num();
+    unsigned int seed = (int) clock() * omp_get_thread_num();
 
     int index = (int) (rand_r(&seed) / (double)RAND_MAX * N);
     for(int i=0; i<D; i++) {

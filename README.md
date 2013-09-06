@@ -12,30 +12,32 @@ small memory footprint.  On my 2011 MacBook Air, the following benchmarks were
 obtained (by running `python -m pyxmeans.benchmark`):
 
 ```
+$ python -m pyxmeans.benchmark
 Creating data
 Number of points:  10000
 Number of dimensions:  2
-Number of clusters:  48
-initial BIC:  -54533.9853416
-initial variance:  0.00119839264405
+Number of clusters:  64
+initial BIC:  -58614.411506
+initial variance:  0.000913536355991
+initial RMS Error:  4.78565971024
 
 Clustering with single-threaded pyxmeans
-singlethreaded pyxmeans took 0.018506s
-BIC of single-threaded pyxmeans:  -54556.7397626
-Variance of single-threaded pyxmeans:  0.000896105585028
-RMS Error:  3.66005961722
+singlethreaded pyxmeans took 0.042223s
+BIC:  -58756.6514152
+Variance:  0.000579472415021
+RMS Error:  4.79181110795
 
 Clustering with multi-threaded pyxmeans
-singlethreaded pyxmeans took 0.043338s
-BIC of multi-threaded pyxmeans:  -54951.6477002
-Variance of multi-threaded pyxmeans:  0.000840786730204
-RMS Error:  3.66460410732
+singlethreaded pyxmeans took 0.121658s
+BIC:  -58824.7853377
+Variance:  0.000493889809274
+RMS Error:  4.78514192219
 
 Clustering with sklearn
-singlethreaded pyxmeans took 29.838236s
-BIC of sklearn:  -55225.3186563
-Variance of sklearn:  0.000682348816436
-RMS Error:  3.66329123839
+singlethreaded pyxmeans took 38.058540s
+BIC:  -58909.976141
+Variance:  0.000487120549504
+RMS Error:  4.78552428169
 ```
 
 ![](benchmark.png)
@@ -46,7 +48,6 @@ NOTES:
       early-stopping.
     * RMS Error for the multi-threaded pymeans is higher because that function
       aims at minimizing the variance of the resulting model.
-
 
 
 ### Dependencies

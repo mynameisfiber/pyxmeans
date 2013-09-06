@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <omp.h>
 #include "generate_data.h"
 
 bool relatively_prime(int A, int B){
@@ -24,18 +25,18 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
     // This uses a very simple LCG in order to quickly get n unique numbers in
     // the space [0,N)
     
-    unsigned int seed = clock() * omp_get_thread_num();
+    unsigned int seed = (int) clock() * omp_get_thread_num();
     // Pick a random starting prime in the set [2,N)
-    unsigned int prime = rand_r(&seed) % (N-3) + 2;
+    unsigned int rel_prime = rand_r(&seed) % (N-3) + 2;
 
-    while (!relatively_prime(prime, N)) {
-        prime += 1;
+    while (!relatively_prime(rel_prime, N)) {
+        rel_prime += 1;
     }
 
     int current = rand_r(&seed) & (N-1);
     for(int i=0; i<n; i++) {
         sample_indicies[i] = current;
-        current = (current + prime) % N;
+        current = (current + rel_prime) % N;
     }
 }
 
