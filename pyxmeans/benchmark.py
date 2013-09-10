@@ -39,9 +39,11 @@ if __name__ == "__main__":
     print "Creating data"
     N = 10000
     D = 2
-    k = 64
+    k = 32
+    max_iter = 100
+    n_samples = k * 10
 
-    data, actual = generate_data(N, D, k, sigma=0.0005)
+    data, actual = generate_data(N, D, k, sigma=0.001)
     actual_data = np.asarray([x["mean"] for x in actual])
     clusters = _minibatch.kmeanspp_multi(data, np.empty((k, D), dtype=np.double), N / 100, 20, 4)
     print "Number of points: ", N
@@ -55,7 +57,7 @@ if __name__ == "__main__":
     print "Clustering with single-threaded pyxmeans"
     clusters_pymeans_single = clusters.copy()
     with TimerBlock("singlethreaded pyxmeans"):
-        mbst = MiniBatch(k, n_samples=k*5, max_iter=100, n_runs=1, init=clusters_pymeans_single, n_jobs=1, compute_labels=False).fit(data)
+        mbst = MiniBatch(k, n_samples=n_samples, max_iter=max_iter, n_runs=1, init=clusters_pymeans_single, n_jobs=1, compute_labels=False).fit(data)
         clusters_pymeans_single = mbst.cluster_centers_
     print "BIC: ", _minibatch.bic(data, clusters_pymeans_single)
     print "Variance: ", _minibatch.model_variance(data, clusters_pymeans_single)
@@ -64,8 +66,8 @@ if __name__ == "__main__":
     
     print "Clustering with multi-threaded pyxmeans"
     clusters_pymeans_multi = clusters.copy()
-    with TimerBlock("singlethreaded pyxmeans"):
-        mbmt = MiniBatch(k, n_samples=k*5, max_iter=100, n_runs=4, init=clusters_pymeans_multi, n_jobs=0, compute_labels=False).fit(data)
+    with TimerBlock("multithreaded pyxmeans"):
+        mbmt = MiniBatch(k, n_samples=n_samples, max_iter=max_iter, n_runs=4, init=clusters_pymeans_multi, n_jobs=0, compute_labels=False).fit(data)
         clusters_pymeans_multi = mbmt.cluster_centers_
     print "BIC: ", _minibatch.bic(data, clusters_pymeans_multi)
     print "Variance: ", _minibatch.model_variance(data, clusters_pymeans_multi)
@@ -75,8 +77,8 @@ if __name__ == "__main__":
     print "Clustering with sklearn"
     if MiniBatchKMeans:
         clusters_sklearn = clusters.copy()
-        with TimerBlock("singlethreaded pyxmeans"):
-            mbkmv = MiniBatchKMeans(k, max_iter=100, batch_size=k*5, init=clusters_sklearn, reassignment_ratio=0, compute_labels=False, max_no_improvement=None).fit(data)
+        with TimerBlock("scikitlearn"):
+            mbkmv = MiniBatchKMeans(k, max_iter=max_iter, batch_size=n_samples, init=clusters_sklearn, reassignment_ratio=0, compute_labels=False, max_no_improvement=None).fit(data)
         print "BIC: ", _minibatch.bic(data, mbkmv.cluster_centers_)
         print "Variance: ", _minibatch.model_variance(data, mbkmv.cluster_centers_)
         print "RMS Error: ", error(actual_data, clusters_sklearn)

@@ -169,7 +169,7 @@ void kmeanspp_multi(double *data, double *centroids, int n_samples, int n_runs, 
  * Runs multiple minibatches (as given by n_runs) and returns the centroids
  * that have the best variance
  */
-void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, double bic_ratio_termination, int k, int N, int D) {
+void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, double bic_ratio_termination, double reassignment_ratio, int k, int N, int D) {
     double *all_centroids;
     double *all_variances = (double*) malloc(n_jobs * sizeof(double));
     
@@ -192,7 +192,7 @@ void minibatch_multi(double *data, double *centroids, int n_samples, int max_ite
                 current_centroid[j] = centroids[j];
             }
 
-            minibatch(data, current_centroid, n_samples, max_iter, bic_ratio_termination, k, N, D);
+            minibatch(data, current_centroid, n_samples, max_iter, bic_ratio_termination, reassignment_ratio, k, N, D);
             cur_variance = model_variance(data, current_centroid, k, N, D);
 
             if (local_iter == 0 || cur_variance < minimum_variance) {
@@ -236,7 +236,7 @@ void minibatch_multi(double *data, double *centroids, int n_samples, int max_ite
  * should already be initialized and each batch will consist of n_samples
  * samples from the data.
  */
-void minibatch(double *data, double *centroids, int n_samples, int max_iter, double bic_ratio_termination, int k, int N, int D)  {
+void minibatch(double *data, double *centroids, int n_samples, int max_iter, double bic_ratio_termination, double reassignment_ratio, int k, int N, int D)  {
     // assert(k < n_samples < N)
     // assert(data.shape == (N, D)
     // assert(centoids.shape == (k, D)
@@ -245,6 +245,10 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, dou
     int *sample_indicies = (int*) malloc(n_samples * sizeof(int));
     int *centroid_counts = (int*) malloc(k * sizeof(int));
     int *cluster_cache = (int*) malloc(n_samples * sizeof(int));
+
+    int *last_centroid_counts = (int*) malloc(k * sizeof(int));
+    int *reassign_centroid_indicies = (int*) malloc(k * sizeof(int));
+    int count_diff = 0, reassign_num = 0, max_count_diff = 0;
 
     double current_bic, bic_sum;
     double *historical_bic;
@@ -255,6 +259,7 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, dou
 
     for (int i=0; i<k; i++) {
         centroid_counts[i] = 0;
+        last_centroid_counts[i] = 0;
     }
 
     _LOG("Starting minibatch\n");
@@ -265,6 +270,31 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, dou
         generate_random_indicies(N, n_samples, sample_indicies);
 
         minibatch_iteration(data, centroids, sample_indicies, centroid_counts, cluster_cache, n_samples, k, N, D);
+
+        reassign_num = 0;
+        max_count_diff = 0;
+        for(int i=0; i<k; i++) {
+            count_diff = centroid_counts[i] - last_centroid_counts[i];
+            if (count_diff == 0) {
+                reassign_centroid_indicies[reassign_num] = i;
+                reassign_num += 1;
+            }
+            if (count_diff > max_count_diff) {
+                max_count_diff = count_diff;
+            }
+        }
+        for(int i=0; i<k; i++) {
+            count_diff = centroid_counts[i] - last_centroid_counts[i];
+            if (count_diff > 0 && count_diff < max_count_diff * reassignment_ratio) {
+                reassign_centroid_indicies[reassign_num] = i;
+                reassign_num += 1;
+            }
+            last_centroid_counts[i] = centroid_counts[i];
+        }
+        if (reassign_num > 0) {
+            _LOG("Reassigning %d centroids\n", reassign_num);
+            reassign_centroids(data, centroids, reassign_centroid_indicies, n_samples, reassign_num, k, N, D);
+        }
 
         if (bic_ratio_termination > 0.0) {
             _LOG("\tChecking for early termination condition\n");
@@ -344,12 +374,47 @@ void minibatch_iteration(double *data, double *centroids, int *sample_indicies, 
     }
 }
 
+void reassign_centroids(double *data, double *centroids, int *reassign_clusters, int n_samples, int K, int k, int N, int D) {
+    unsigned int seed = (int) clock() * (omp_get_thread_num() + 1);
+
+    double distance, total_distance2;
+    double *distances2 = (double*) malloc(n_samples * sizeof(double));
+    int *sample_indicies = (int*) malloc(n_samples * sizeof(int));
+    for(int c=0; c<K; c++) {
+        total_distance2 = 0.0;
+        
+        generate_random_indicies(N, n_samples, sample_indicies);
+        for(int i=0; i<n_samples; i++) {
+            int idx = sample_indicies[i];
+            distance = distance_to_closest_centroid(data + D*idx, centroids, k, D);
+            distances2[i] = distance * distance;
+            total_distance2 += distances2[i];
+        }
+        
+        int index;
+        double d = (rand_r(&seed) / (double)RAND_MAX) * total_distance2;
+        for(index = 0; index < N && d >= 0; index++) {
+            d -= distances2[index];
+        }
+        if (index) index--;
+            
+        int data_index = sample_indicies[index];
+        int centroid_idx = reassign_clusters[c];
+        for(int i=0; i<D; i++) {
+            centroids[centroid_idx*D + i] = data[data_index*D + i];
+        }
+    }
+
+    free(distances2);
+    free(sample_indicies);
+}
+
 /*
  * Initialize centroids using the k-means++ algorithm over the given data.
  */
 void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int D) {
     /* The first cluster is centered from a randomly chosen point in the data */
-    unsigned int seed = (int) clock() * omp_get_thread_num();
+    unsigned int seed = (int) clock() * (omp_get_thread_num() + 1);
 
     int index = (int) (rand_r(&seed) / (double)RAND_MAX * N);
     for(int i=0; i<D; i++) {
@@ -362,25 +427,25 @@ void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int 
      * closest centroid
      */
     double distance, total_distance2;
-    double *distances = (double*) malloc(n_samples * sizeof(double));
+    double *distances2 = (double*) malloc(n_samples * sizeof(double));
     int *sample_indicies = (int*) malloc(n_samples * sizeof(int));
     for(int c=1; c<k; c++) {
         total_distance2 = 0.0;
-        
+
         generate_random_indicies(N, n_samples, sample_indicies);
         for(int i=0; i<n_samples; i++) {
             int idx = sample_indicies[i];
             distance = distance_to_closest_centroid(data + D*idx, centroids, c, D);
-            distances[i] = distance;
-            total_distance2 += distance * distance;
+            distances2[i] = distance * distance;
+            total_distance2 += distances2[i];
         }
         
         int index;
-        double d = rand_r(&seed) / (double)RAND_MAX * total_distance2;
-        for(index = 0; index < N && d > 0; index++) {
-            d -= distances[index];
+        double d = (rand_r(&seed) / (double)RAND_MAX) * total_distance2;
+        for(index = 0; index < N && d >= 0; index++) {
+            d -= distances2[index];
         }
-        index--;
+        if(index) index--;
             
         int data_index = sample_indicies[index];
         for(int i=0; i<D; i++) {
@@ -388,16 +453,16 @@ void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int 
         }
     }
 
-    free(distances);
+    free(distances2);
     free(sample_indicies);
 }
 
 
 int main(void) {
-    int N = 10000;
+    int N = 1000;
     int D = 2;
     int k = 256;
-    int n_samples = k*3;
+    int n_samples = k*5;
     int max_iter = 1000;
 
     printf("Allocating test data\n");
@@ -406,14 +471,14 @@ int main(void) {
 
     printf("Creating synthetic data\n");
     gaussian_data(data, 20, N, D);
-    kmeanspp(data, centroids, N/100, k, N, D);
+    kmeanspp(data, centroids, n_samples, k, N, D);
 
 #ifdef DEBUG_OUTPUT
     save_double_matrix(data, "data/cluster_data.dat", N, D);
 #endif
 
     clock_t start_clock = clock();
-    minibatch(data, centroids, n_samples, max_iter, 0.001, k, N, D);
+    minibatch(data, centroids, n_samples, max_iter, 0.001, 0.1, k, N, D);
     /*minibatch_multi(data, centroids, n_samples, max_iter, 10, 4, -1.0, k, N, D);*/
     clock_t end_clock = clock();
     printf("BIC of resulting model: %f\n", bayesian_information_criterion(data, centroids, k, N, D));

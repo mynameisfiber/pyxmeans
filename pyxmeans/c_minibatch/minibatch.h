@@ -12,13 +12,14 @@
     #define _LOG(...) do {;} while(0)
 #endif
 
-void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, double bic_ratio_termination, int k, int N, int D);
-void minibatch(double *data, double *centroids, int n_samples, int max_iter, double bic_ratio_termination, int k, int N, int D);
+void minibatch_multi(double *data, double *centroids, int n_samples, int max_iter, int n_runs, int n_jobs, double bic_ratio_termination, double reassignment_ratio, int k, int N, int D);
+void minibatch(double *data, double *centroids, int n_samples, int max_iter, double bic_ratio_termination, double reassignment_ratio, int k, int N, int D);
 void minibatch_iteration(double *data, double *centroids, int *sample_indicies, int *centroid_counts, int *cluster_cache, int n_samples, int k, int N, int D);
 void gradient_step(double *vector, double *centroid, int count, int D);
 
 double model_variance(double *data, double *centroids, int k, int N, int D);
 double bayesian_information_criterion(double *data, double *centroids, int k, int N, int D);
+void reassign_centroids(double *data, double *centroids, int *reassign_clusters, int n_samples, int K, int k, int N, int D);
 void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int D);
 void kmeanspp_multi(double *data, double *centroids, int n_samples, int n_runs, int n_jobs, int k, int N, int D);
 

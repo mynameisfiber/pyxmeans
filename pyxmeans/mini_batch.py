@@ -58,6 +58,9 @@ class MiniBatch(object):
         self.n_jobs = n_jobs
         self.compute_labels = compute_labels
 
+        self.bic_termination = -1
+        self.reassignment_ratio = 0.0
+
         self.cluster_centers_ = None
         self.labels_ = None
 
@@ -91,9 +94,9 @@ class MiniBatch(object):
             self.cluster_centers_ = self.init
 
         if self.n_jobs > 1:
-            self.cluster_centers_ =  _minibatch.minibatch_multi(data, self.cluster_centers_, self.n_samples, self.max_iter, self.n_runs, self.n_jobs, -1.0)
+            self.cluster_centers_ =  _minibatch.minibatch_multi(data, self.cluster_centers_, self.n_samples, self.max_iter, self.n_runs, self.n_jobs, self.bic_termination, self.reassignment_ratio)
         else:
-            self.cluster_centers_ =  _minibatch.minibatch(data, self.cluster_centers_, self.n_samples, self.max_iter, -1.0)
+            self.cluster_centers_ =  _minibatch.minibatch(data, self.cluster_centers_, self.n_samples, self.max_iter, self.bic_termination, self.reassignment_ratio)
 
         if self.compute_labels:
             self.labels_ = np.zeros((data.shape[0], ), dtype=np.intc)

@@ -25,7 +25,7 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
     // This uses a very simple LCG in order to quickly get n unique numbers in
     // the space [0,N)
     
-    unsigned int seed = (int) clock() * omp_get_thread_num();
+    unsigned int seed = (int) clock() * (omp_get_thread_num() + 1);
     // Pick a random starting prime in the set [2,N)
     unsigned int rel_prime = rand_r(&seed) % (N-3) + 2;
 

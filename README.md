@@ -16,28 +16,28 @@ $ python -m pyxmeans.benchmark
 Creating data
 Number of points:  10000
 Number of dimensions:  2
-Number of clusters:  64
-initial BIC:  -58614.411506
-initial variance:  0.000913536355991
-initial RMS Error:  4.78565971024
+Number of clusters:  32
+initial BIC:  -50732.4386243
+initial variance:  0.00132625903391
+initial RMS Error:  2.8660516391
 
 Clustering with single-threaded pyxmeans
-singlethreaded pyxmeans took 0.042223s
-BIC:  -58756.6514152
-Variance:  0.000579472415021
-RMS Error:  4.79181110795
+singlethreaded pyxmeans took 0.023339s
+BIC:  -50897.6672898
+Variance:  0.000826657605777
+RMS Error:  2.86707908932
 
 Clustering with multi-threaded pyxmeans
-singlethreaded pyxmeans took 0.121658s
-BIC:  -58824.7853377
-Variance:  0.000493889809274
-RMS Error:  4.78514192219
+multithreaded pyxmeans took 0.079182s
+BIC:  -51117.8275529
+Variance:  0.000801938412009
+RMS Error:  2.8652907064
 
 Clustering with sklearn
-singlethreaded pyxmeans took 38.058540s
-BIC:  -58909.976141
-Variance:  0.000487120549504
-RMS Error:  4.78552428169
+scikitlearn took 38.654962s
+BIC:  -50979.7777762
+Variance:  0.000767407020249
+RMS Error:  2.86791602632
 ```
 
 ![](benchmark.png)
