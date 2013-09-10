@@ -17,27 +17,27 @@ Creating data
 Number of points:  10000
 Number of dimensions:  2
 Number of clusters:  32
-initial BIC:  -50732.4386243
-initial variance:  0.00132625903391
-initial RMS Error:  2.8660516391
+initial BIC:  -49941.3646148
+initial variance:  0.00149836505705
+initial RMS Error:  2.6090552287
 
 Clustering with single-threaded pyxmeans
-singlethreaded pyxmeans took 0.023339s
-BIC:  -50897.6672898
-Variance:  0.000826657605777
-RMS Error:  2.86707908932
+singlethreaded pyxmeans took 0.024292s
+BIC:  -51057.495506
+Variance:  0.000901304299092
+RMS Error:  2.60713773714
 
 Clustering with multi-threaded pyxmeans
-multithreaded pyxmeans took 0.079182s
-BIC:  -51117.8275529
-Variance:  0.000801938412009
-RMS Error:  2.8652907064
+multithreaded pyxmeans took 0.067050s
+BIC:  -50773.6912824
+Variance:  0.000928799737286
+RMS Error:  2.60608823957
 
 Clustering with sklearn
-scikitlearn took 38.654962s
-BIC:  -50979.7777762
-Variance:  0.000767407020249
-RMS Error:  2.86791602632
+scikitlearn took 20.308440s
+BIC:  -50525.8407882
+Variance:  0.000968057715029
+RMS Error:  2.61356849059
 ```
 
 ![](benchmark.png)

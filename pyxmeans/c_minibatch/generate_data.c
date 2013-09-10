@@ -27,7 +27,7 @@ void generate_random_indicies(int N, int n, int *sample_indicies) {
     
     unsigned int seed = (int) clock() * (omp_get_thread_num() + 1);
     // Pick a random starting prime in the set [2,N)
-    unsigned int rel_prime = rand_r(&seed) % (N-3) + 2;
+    unsigned int rel_prime = (rand_r(&seed) / ((double)RAND_MAX+1)) * (N-3) + 2;
 
     while (!relatively_prime(rel_prime, N)) {
         rel_prime += 1;

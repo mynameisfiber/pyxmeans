@@ -392,7 +392,7 @@ void reassign_centroids(double *data, double *centroids, int *reassign_clusters,
         }
         
         int index;
-        double d = (rand_r(&seed) / (double)RAND_MAX) * total_distance2;
+        double d = (rand_r(&seed) / ((double)RAND_MAX+1)) * total_distance2;
         for(index = 0; index < N && d >= 0; index++) {
             d -= distances2[index];
         }
@@ -416,7 +416,7 @@ void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int 
     /* The first cluster is centered from a randomly chosen point in the data */
     unsigned int seed = (int) clock() * (omp_get_thread_num() + 1);
 
-    int index = (int) (rand_r(&seed) / (double)RAND_MAX * N);
+    int index = (int) (rand_r(&seed) / ((double)RAND_MAX+1) * N);
     for(int i=0; i<D; i++) {
         centroids[i] = data[index*D + i];
     }
@@ -441,7 +441,7 @@ void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int 
         }
         
         int index;
-        double d = (rand_r(&seed) / (double)RAND_MAX) * total_distance2;
+        double d = (rand_r(&seed) / ((double)RAND_MAX+1)) * total_distance2;
         for(index = 0; index < N && d >= 0; index++) {
             d -= distances2[index];
         }
