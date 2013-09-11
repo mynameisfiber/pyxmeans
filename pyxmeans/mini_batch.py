@@ -6,7 +6,7 @@ import _minibatch
 import multiprocessing
 
 class MiniBatch(object):
-    def __init__(self, n_clusters, n_samples=None, max_iter=1000, n_runs=4, n_init=3, init='kmeanspp', n_jobs=-1, compute_labels=False):
+    def __init__(self, n_clusters, n_samples=None, max_iter=1000, n_runs=4, n_init=3, init='kmeanspp', n_jobs=-1, bic_termination=-1.0, reassignment_ratio=0.0, compute_labels=False, verbose=False):
         """
         Create a MiniBatch model as described in http://www.eecs.tufts.edu/~dsculley/papers/fastkmeans.pdf
 
@@ -34,6 +34,15 @@ class MiniBatch(object):
                      'random' or an ndarray of pre-computed centers
         :type init: string or ndarray(double), shape = (n_clusters, n_features)
 
+        :param bic_termination: Maximum change in BIC score that will trigger
+                                an early termination of the mini batch run
+        :type bic_termination: float
+
+        :param reassignment_ratio: Maximum ratio from maximum number of cluster
+                                   members that will cause a centroid's
+                                   reassignment
+        :type reassignment_ratio: float
+
         :param n_jobs: Number of concurrent jobs to run.  A value of 1 will run
                        things serially, a positive number will run with that
                        number of cores and a negative value will leave that
@@ -46,6 +55,9 @@ class MiniBatch(object):
                                 in MiniBatch.labels_
         :type compute_labels: bool
 
+        :param vebose: Toggle verbosity
+        :type verbose: bool
+
         :returns: Trained MiniBatch instance
         :rtype: MiniBatch
         """
@@ -57,9 +69,10 @@ class MiniBatch(object):
         self.n_init = n_init
         self.n_jobs = n_jobs
         self.compute_labels = compute_labels
+        self.verbose = verbose
 
-        self.bic_termination = -1
-        self.reassignment_ratio = 0.0
+        self.bic_termination = bic_termination
+        self.reassignment_ratio = reassignment_ratio
 
         self.cluster_centers_ = None
         self.labels_ = None
@@ -78,6 +91,8 @@ class MiniBatch(object):
         :rtype: MiniBatch
         """
         data = np.asarray(data, dtype=np.double)
+        if self.verbose:
+            print "Initializing clusters"
         if self.init == 'random':
             self.cluster_centers_ = np.random.random((self.n_clusters, data.shape[1]), dtype=np.double)
         elif self.init == 'kmeans++':
@@ -93,12 +108,16 @@ class MiniBatch(object):
                 raise Exception("init cluster not of correct shape %r != (%d, %d)" % (self.init.shape, self.n_clusters, data.shape[1]))
             self.cluster_centers_ = self.init
 
+        if self.verbose:
+            print "Running minibatch"
         if self.n_jobs > 1:
             self.cluster_centers_ =  _minibatch.minibatch_multi(data, self.cluster_centers_, self.n_samples, self.max_iter, self.n_runs, self.n_jobs, self.bic_termination, self.reassignment_ratio)
         else:
             self.cluster_centers_ =  _minibatch.minibatch(data, self.cluster_centers_, self.n_samples, self.max_iter, self.bic_termination, self.reassignment_ratio)
 
         if self.compute_labels:
+            if self.verbose:
+                print "Computing labels"
             self.labels_ = np.zeros((data.shape[0], ), dtype=np.intc)
             self.labels_ = _minibatch.assign_centroids(data, self.cluster_centers_, self.labels_, self.n_jobs)
 
