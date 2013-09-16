@@ -380,20 +380,21 @@ void reassign_centroids(double *data, double *centroids, int *reassign_clusters,
     double distance, total_distance2;
     double *distances2 = (double*) malloc(n_samples * sizeof(double));
     int *sample_indicies = (int*) malloc(n_samples * sizeof(int));
+
+    generate_random_indicies(N, n_samples, sample_indicies);
+    for(int i=0; i<n_samples; i++) {
+        int idx = sample_indicies[i];
+        distance = distance_to_closest_centroid(data + D*idx, centroids, k, D);
+        distances2[i] = distance * distance;
+        total_distance2 += distances2[i];
+    }
+
     for(int c=0; c<K; c++) {
         total_distance2 = 0.0;
         
-        generate_random_indicies(N, n_samples, sample_indicies);
-        for(int i=0; i<n_samples; i++) {
-            int idx = sample_indicies[i];
-            distance = distance_to_closest_centroid(data + D*idx, centroids, k, D);
-            distances2[i] = distance * distance;
-            total_distance2 += distances2[i];
-        }
-        
         int index;
         double d = (rand_r(&seed) / ((double)RAND_MAX+1)) * total_distance2;
-        for(index = 0; index < N && d >= 0; index++) {
+        for(index = 0; index < n_samples && d >= 0; index++) {
             d -= distances2[index];
         }
         if (index) index--;
@@ -403,6 +404,9 @@ void reassign_centroids(double *data, double *centroids, int *reassign_clusters,
         for(int i=0; i<D; i++) {
             centroids[centroid_idx*D + i] = data[data_index*D + i];
         }
+
+        total_distance2 -= distances2[index];
+        distances2[index] = 0;
     }
 
     free(distances2);
@@ -420,6 +424,7 @@ void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int 
     for(int i=0; i<D; i++) {
         centroids[i] = data[index*D + i];
     }
+    _LOG("Fitted clusters: 1 / %d\n", k);
 
     /*
      * Now we pick random data points to use for centroids using a weighted
@@ -451,6 +456,7 @@ void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int 
         for(int i=0; i<D; i++) {
             centroids[c*D + i] = data[data_index*D + i];
         }
+        _LOG("Fitted clusters: %d / %d\n", c, k);
     }
 
     free(distances2);
