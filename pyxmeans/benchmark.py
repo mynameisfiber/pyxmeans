@@ -77,8 +77,7 @@ if __name__ == "__main__":
 
     print "Clustering with multi-threaded pyxmeans (k in (26,36))"
     with TimerBlock("multithreaded pyxmeans"):
-        mxmt = XMeans(data, 26, 36, verbose=False)
-        mxmt.train()
+        mxmt = XMeans(26, 36, verbose=False).fit(data)
         clusters_xmeans = mxmt.cluster_centers_
     print "Num Clusters: ", len(clusters_xmeans)
     print "BIC: ", _minibatch.bic(data, clusters_xmeans)

@@ -13,8 +13,7 @@ FORMAT = '[%(asctime)s] %(levelname)s - %(funcName)s:%(lineno)d: %(message)s'
 logging.basicConfig(format=FORMAT, level=logging.FATAL)
 
 class XMeans(object):
-    def __init__(self, data, kmin, kmax, init='kmeans++', sample_percent = 0.20, minibatch_args=None, verbose = False):
-        self.data = data
+    def __init__(self, kmin, kmax=None, init='kmeans++', sample_percent = 0.20, minibatch_args=None, verbose = False):
         self.kmin = kmin
         self.kmax = kmax
         self.init = init
@@ -24,15 +23,17 @@ class XMeans(object):
         if self.verbose:
             logging.getLogger().setLevel(logging.INFO)
 
+        self.data_ = None
         self._minibatch_args = minibatch_args or {}
         self.cluster_centers_ = []
 
-    def train(self):
+    def fit(self, data):
+        self.data_ = data
         k = self.kmin
         cluster_centers = self.init
-        while k <= self.kmax:
-            logging.info("Training with k=%d", k)
-            self._model = self._fit(k, self.data, cluster_centers)
+        while self.kmax is None or k <= self.kmax:
+            logging.info("Fitting with k=%d", k)
+            self._model = self._fit(k, data, cluster_centers)
             
             centroid_distances = euclidean_distances(self._model.centroids, self._model.centroids)
             centroid_distances += np.diag([np.Infinity] * k)
@@ -52,7 +53,7 @@ class XMeans(object):
                 new_point2 = centroid - vector
 
                 logging.info("\t\tRunning secondary kmeans")
-                points = self.data[self._model.labels == i]
+                points = data[self._model.labels == i]
                 test_model = self._fit(2, points, np.asarray([new_point1, new_point2]))
 
                 cluster1 = points[test_model.labels == 0]
@@ -74,14 +75,14 @@ class XMeans(object):
             k = len(cluster_centers)
 
         logging.info("Refining model with k = %d", len(cluster_centers))
-        init = np.asarray(cluster_centers, dtype=self.data.dtype)
+        init = np.asarray(cluster_centers, dtype=data.dtype)
         self.model = MiniBatch(
             k, 
             compute_labels = True,
             init = init,
             n_jobs = 0,
             **self._minibatch_args
-        ).fit(self.data[:])
+        ).fit(data[:])
         self.cluster_centers_ = self.model.cluster_centers_
         return self.model
 
