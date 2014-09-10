@@ -100,7 +100,7 @@ class MiniBatch(object):
             if self.n_jobs > 1:
                 self.cluster_centers_ = _minibatch.kmeanspp_multi(data, self.cluster_centers_, self.n_samples, self.n_init, self.n_jobs)
             else:
-                self.cluster_centers_ = _minibatch.kmeanspp(data, self.cluster_centers_, self.n_samples, self.n_init)
+                self.cluster_centers_ = _minibatch.kmeanspp(data, self.cluster_centers_, self.n_samples)
         elif isinstance(self.init, np.ndarray):
             if not self.init.flags['C_CONTIGUOUS']:
                 raise Exception("init ndarray must be C_CONTIGUOUS")

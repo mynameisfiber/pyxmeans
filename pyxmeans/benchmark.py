@@ -4,6 +4,7 @@ import time
 from contextlib import contextmanager
 from pyxmeans import _minibatch
 from pyxmeans.mini_batch import MiniBatch
+from pyxmeans.xmeans import XMeans
 import pylab as py
 
 try:
@@ -74,6 +75,17 @@ if __name__ == "__main__":
     print "RMS Error: ", error(actual_data, clusters_pymeans_multi)
     print
 
+    print "Clustering with multi-threaded pyxmeans (k in (26,36))"
+    with TimerBlock("multithreaded pyxmeans"):
+        mxmt = XMeans(data, 26, 36, verbose=False)
+        mxmt.train()
+        clusters_xmeans = mxmt.cluster_centers_
+    print "Num Clusters: ", len(clusters_xmeans)
+    print "BIC: ", _minibatch.bic(data, clusters_xmeans)
+    print "Variance: ", _minibatch.model_variance(data, clusters_xmeans)
+    print "RMS Error: ", error(actual_data, clusters_xmeans)
+    print
+
     print "Clustering with sklearn"
     if MiniBatchKMeans:
         clusters_sklearn = clusters.copy()
@@ -88,12 +100,13 @@ if __name__ == "__main__":
 
     py.figure()
     py.title("pyxmeans performance")
-    py.scatter(data[:,0], data[:,1], label="data")
-    py.scatter(clusters_pymeans_single[:,0], clusters_pymeans_single[:,1], c='m', s=75, alpha=0.75, label="pymeans single")
-    py.scatter(clusters_pymeans_multi[:,0], clusters_pymeans_multi[:,1], c='y', s=75, alpha=0.75, label="pymeans multi")
+    py.scatter(data[:,0], data[:,1], alpha=0.25, label="data")
+    py.scatter(actual_data[:,0], actual_data[:,1], c='r', s=125, alpha=0.6, label="actual center")
+    py.scatter(clusters_pymeans_single[:,0], clusters_pymeans_single[:,1], c='m', s=75, alpha=0.4, label="pymeans single")
+    py.scatter(clusters_pymeans_multi[:,0], clusters_pymeans_multi[:,1], c='y', s=75, alpha=0.4, label="pymeans multi")
+    py.scatter(clusters_xmeans[:,0], clusters_xmeans[:,1], c='w', s=75, alpha=0.4, label="pyxmeans")
     if MiniBatchKMeans:
-        py.scatter(clusters_sklearn[:,0], clusters_sklearn[:,1], s=75, c='g', alpha=0.75, label="sklearn")
-    py.scatter(actual_data[:,0], actual_data[:,1], c='r', s=75, alpha=0.75, label="actual center")
+        py.scatter(clusters_sklearn[:,0], clusters_sklearn[:,1], s=75, c='g', alpha=0.4, label="sklearn")
     py.legend()
 
     py.show()
