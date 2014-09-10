@@ -75,9 +75,10 @@ if __name__ == "__main__":
     print "RMS Error: ", error(actual_data, clusters_pymeans_multi)
     print
 
-    print "Clustering with multi-threaded pyxmeans (k in (26,36))"
+    k_init = int(k * 0.65)
+    print "Clustering with multi-threaded pyxmeans (starting k at {})".format(k_init)
     with TimerBlock("multithreaded pyxmeans"):
-        mxmt = XMeans(26, 36, verbose=False).fit(data)
+        mxmt = XMeans(k_init, verbose=False).fit(data)
         clusters_xmeans = mxmt.cluster_centers_
     print "Num Clusters: ", len(clusters_xmeans)
     print "BIC: ", _minibatch.bic(data, clusters_xmeans)
@@ -108,6 +109,7 @@ if __name__ == "__main__":
         py.scatter(clusters_sklearn[:,0], clusters_sklearn[:,1], s=75, c='g', alpha=0.4, label="sklearn")
     py.legend()
 
+    py.tight_layout()
     py.show()
 
 

@@ -24,34 +24,34 @@ Creating data
 Number of points:  10000
 Number of dimensions:  2
 Number of clusters:  32
-initial BIC:  -50362.6636213
-initial variance:  0.00139526682125
-initial RMS Error:  2.63545562649
+initial BIC:  -50214.4559857
+initial variance:  0.00164148581105
+initial RMS Error:  2.31798411948
 
 Clustering with single-threaded pyxmeans
-singlethreaded pyxmeans took 0.044637s
-BIC:  -51030.9046731
-Variance:  0.000893989133563
-RMS Error:  2.61327999377
+singlethreaded pyxmeans took 0.043875s
+BIC:  -50762.9827994
+Variance:  0.00115765494439
+RMS Error:  2.31035692593
 
 Clustering with multi-threaded pyxmeans
-multithreaded pyxmeans took 0.343579s
-BIC:  -50976.5201592
-Variance:  0.00090523484603
-RMS Error:  2.61341727462
+multithreaded pyxmeans took 0.326129s
+BIC:  -50982.8001508
+Variance:  0.00104848000929
+RMS Error:  2.3113536455
 
-Clustering with multi-threaded pyxmeans (k in (26,36))
-multithreaded pyxmeans took 36.425922s
-Num Clusters:  34
-BIC:  -51931.8839323
-Variance:  0.000862645312699
-RMS Error:  2.61321981998
+Clustering with multi-threaded pyxmeans (starting k at 20)
+multithreaded pyxmeans took 79.005781s
+Num Clusters:  30
+BIC:  -50352.8461421
+Variance:  0.00104986238957
+RMS Error:  2.31100693171
 
 Clustering with sklearn
-scikitlearn took 9.610394s
-BIC:  -50464.636064
-Variance:  0.000952063085393
-RMS Error:  2.61890108593
+scikitlearn took 9.241426s
+BIC:  -50679.1763114
+Variance:  0.00112580908789
+RMS Error:  2.31050074192
 ```
 
 ![](benchmark.png)
@@ -72,4 +72,5 @@ NOTES:
 ### Todo:
 
 * Optimize data layout when dealing with / comparing computed clusters
-* Early stopping mechanism
+* Better memory management in XMeans (we're copying things everywhere)
+* Pool out children tests in XMeans
