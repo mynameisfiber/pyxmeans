@@ -141,7 +141,6 @@ class XMeans(object):
             k, 
             compute_labels = True,
             init = init,
-            n_jobs = 0,
             n_samples = n_samples,
             **self._minibatch_args
         ).fit(data[:])
