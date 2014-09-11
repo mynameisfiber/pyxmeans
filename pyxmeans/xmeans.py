@@ -23,12 +23,12 @@ class XMeans(object):
         if self.verbose:
             logging.getLogger().setLevel(logging.INFO)
 
-        self.data_ = None
         self._minibatch_args = minibatch_args or {}
+        self.data_ = None
         self.cluster_centers_ = []
 
     def fit(self, data):
-        self.data_ = data
+        data = self.data_ = np.asarray(data)
         k = self.kmin
         cluster_centers = self.init
         while self.kmax is None or k <= self.kmax:
@@ -53,7 +53,11 @@ class XMeans(object):
                 new_point2 = centroid - vector
 
                 logging.info("\t\tRunning secondary kmeans")
-                points = data[self._model.labels == i]
+                model_index = (self._model.labels == i)
+                if not np.any(model_index):
+                    logging.info("Disregarding cluster since it has no citizens")
+                    continue
+                points = data[model_index]
                 test_model = self._fit(2, points, np.asarray([new_point1, new_point2]))
 
                 cluster1 = points[test_model.labels == 0]
