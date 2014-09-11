@@ -5,7 +5,12 @@ from contextlib import contextmanager
 from pyxmeans import _minibatch
 from pyxmeans.mini_batch import MiniBatch
 from pyxmeans.xmeans import XMeans
-import pylab as py
+
+try:
+    import pylab as py
+except ImportError:
+    py = None
+    print "Could not find matplotlib, not plotting"
 
 try:
     from sklearn.cluster import MiniBatchKMeans
@@ -98,18 +103,18 @@ if __name__ == "__main__":
         print "sklearn not found"
 
 
-    py.figure()
-    py.title("pyxmeans performance")
-    py.scatter(data[:,0], data[:,1], alpha=0.25, label="data")
-    py.scatter(actual_data[:,0], actual_data[:,1], c='r', s=125, alpha=0.6, label="actual center")
-    py.scatter(clusters_pymeans_single[:,0], clusters_pymeans_single[:,1], c='m', s=75, alpha=0.4, label="pymeans single")
-    py.scatter(clusters_pymeans_multi[:,0], clusters_pymeans_multi[:,1], c='y', s=75, alpha=0.4, label="pymeans multi")
-    py.scatter(clusters_xmeans[:,0], clusters_xmeans[:,1], c='w', s=75, alpha=0.4, label="pyxmeans")
-    if MiniBatchKMeans:
-        py.scatter(clusters_sklearn[:,0], clusters_sklearn[:,1], s=75, c='g', alpha=0.4, label="sklearn")
-    py.legend()
+    if py is not None:
+        py.figure()
+        py.title("pyxmeans performance")
+        py.scatter(data[:,0], data[:,1], alpha=0.25, label="data")
+        py.scatter(actual_data[:,0], actual_data[:,1], c='r', s=125, alpha=0.6, label="actual center")
+        py.scatter(clusters_pymeans_single[:,0], clusters_pymeans_single[:,1], c='m', s=75, alpha=0.4, label="pymeans single")
+        py.scatter(clusters_pymeans_multi[:,0], clusters_pymeans_multi[:,1], c='y', s=75, alpha=0.4, label="pymeans multi")
+        py.scatter(clusters_xmeans[:,0], clusters_xmeans[:,1], c='w', s=75, alpha=0.4, label="pyxmeans")
+        if MiniBatchKMeans:
+            py.scatter(clusters_sklearn[:,0], clusters_sklearn[:,1], s=75, c='g', alpha=0.4, label="sklearn")
+        py.legend()
 
-    py.tight_layout()
-    py.show()
-
+        py.tight_layout()
+        py.show()
 
