@@ -98,7 +98,8 @@ class MiniBatch(object):
         elif self.init == 'kmeans++':
             self.cluster_centers_ = np.zeros((self.n_clusters, data.shape[1]), dtype=np.double)
             if self.n_jobs > 1:
-                self.cluster_centers_ = _minibatch.kmeanspp_multi(data, self.cluster_centers_, self.n_samples, self.n_init, self.n_jobs)
+                jobs = min(self.n_jobs, self.n_init)
+                self.cluster_centers_ = _minibatch.kmeanspp_multi(data, self.cluster_centers_, self.n_samples, self.n_init, jobs)
             else:
                 self.cluster_centers_ = _minibatch.kmeanspp(data, self.cluster_centers_, self.n_samples)
         elif isinstance(self.init, np.ndarray):
@@ -111,7 +112,8 @@ class MiniBatch(object):
         if self.verbose:
             print "Running minibatch"
         if self.n_jobs > 1:
-            self.cluster_centers_ =  _minibatch.minibatch_multi(data, self.cluster_centers_, self.n_samples, self.max_iter, self.n_runs, self.n_jobs, self.bic_termination, self.reassignment_ratio)
+            jobs = min(self.n_jobs, self.n_runs)
+            self.cluster_centers_ =  _minibatch.minibatch_multi(data, self.cluster_centers_, self.n_samples, self.max_iter, self.n_runs, jobs, self.bic_termination, self.reassignment_ratio)
         else:
             self.cluster_centers_ =  _minibatch.minibatch(data, self.cluster_centers_, self.n_samples, self.max_iter, self.bic_termination, self.reassignment_ratio)
 

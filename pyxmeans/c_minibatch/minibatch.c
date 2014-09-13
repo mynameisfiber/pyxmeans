@@ -148,7 +148,7 @@ void kmeanspp_multi(double *data, double *centroids, int n_samples, int n_runs, 
         int min_variance_index;
         _LOG("Finding min variance\n");
         for(int i=0; i<n_jobs; i++) {
-            _LOG("variance[%d] = %f\n", i, all_variances[i]);
+            _LOG("variance[%d] = %e\n", i, all_variances[i]);
             if (i == 0 || all_variances[i] < min_variance) {
                 min_variance = all_variances[i];
                 min_variance_index = i;
