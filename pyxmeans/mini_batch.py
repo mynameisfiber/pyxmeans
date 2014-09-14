@@ -6,7 +6,7 @@ import _minibatch
 import multiprocessing
 
 class MiniBatch(object):
-    def __init__(self, n_clusters, n_samples=None, max_iter=1000, n_runs=4, n_init=3, init='kmeans++', n_jobs=-1, bic_termination=-1.0, reassignment_ratio=0.0, compute_labels=False, verbose=False):
+    def __init__(self, n_clusters, n_samples=None, max_iter=1000, n_runs=4, n_init=3, init='kmeans++', n_jobs=0, bic_termination=-1.0, reassignment_ratio=0.0, compute_labels=False, verbose=False):
         """
         Create a MiniBatch model as described in http://www.eecs.tufts.edu/~dsculley/papers/fastkmeans.pdf
 
@@ -97,8 +97,8 @@ class MiniBatch(object):
             self.cluster_centers_ = np.random.random((self.n_clusters, data.shape[1]), dtype=np.double)
         elif self.init == 'kmeans++':
             self.cluster_centers_ = np.zeros((self.n_clusters, data.shape[1]), dtype=np.double)
-            if self.n_jobs > 1:
-                jobs = min(self.n_jobs, self.n_init)
+            jobs = min(self.n_jobs, self.n_init)
+            if jobs > 1:
                 self.cluster_centers_ = _minibatch.kmeanspp_multi(data, self.cluster_centers_, self.n_samples, self.n_init, jobs)
             else:
                 self.cluster_centers_ = _minibatch.kmeanspp(data, self.cluster_centers_, self.n_samples)
@@ -111,8 +111,8 @@ class MiniBatch(object):
 
         if self.verbose:
             print "Running minibatch"
-        if self.n_jobs > 1:
-            jobs = min(self.n_jobs, self.n_runs)
+        jobs = min(self.n_jobs, self.n_runs)
+        if jobs > 1:
             self.cluster_centers_ =  _minibatch.minibatch_multi(data, self.cluster_centers_, self.n_samples, self.max_iter, self.n_runs, jobs, self.bic_termination, self.reassignment_ratio)
         else:
             self.cluster_centers_ =  _minibatch.minibatch(data, self.cluster_centers_, self.n_samples, self.max_iter, self.bic_termination, self.reassignment_ratio)
