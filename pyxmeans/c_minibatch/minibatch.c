@@ -118,7 +118,7 @@ void kmeanspp_multi(double *data, double *centroids, int n_samples, int n_runs, 
         all_centroids = centroids;
     }
 
-    #pragma omp parallel shared(all_centroids, all_variances, data, distance_metric) num_threads(n_jobs) default(shared)
+    #pragma omp parallel shared(all_centroids, all_variances, data, distance_metric) num_threads(n_jobs)
     {
         int id = omp_get_thread_num();
         double minimum_variance, cur_variance;
@@ -179,7 +179,7 @@ void minibatch_multi(double *data, double *centroids, int n_samples, int max_ite
         all_centroids = centroids;
     }
 
-    #pragma omp parallel shared(all_centroids, all_variances, data, distance_metric) num_threads(n_jobs) default(shared)
+    #pragma omp parallel shared(all_centroids, all_variances, data, distance_metric) num_threads(n_jobs)
     {
         int id = omp_get_thread_num();
         double minimum_variance, cur_variance;
