@@ -51,7 +51,7 @@ double model_variance(double *data, double *centroids, int k, int N, int D) {
     double variance_distance = 0.0;
     for(int i=0; i<N; i++) {
         int c = closest_centroid(data + i*D, centroids, k, D);
-        variance_distance += euclidian_distance(data + i*D, centroids + c*D, D);
+        variance_distance += distance_metric(data + i*D, centroids + c*D, D);
     }
     double variance = variance_distance / (double)(N - k);
     if (variance == 0) {
@@ -75,7 +75,7 @@ double bayesian_information_criterion(double *data, double *centroids, int k, in
     for(int i=0; i<N; i++) {
         int c = closest_centroid(data + i*D, centroids, k, D);
         centroid_count[c] += 1;
-        variance_distance += euclidian_distance(data + i*D, centroids + c*D, D);
+        variance_distance += distance_metric(data + i*D, centroids + c*D, D);
     }
     double variance = variance_distance / (double)(N - k);
     if (variance == 0) {
@@ -118,7 +118,7 @@ void kmeanspp_multi(double *data, double *centroids, int n_samples, int n_runs, 
         all_centroids = centroids;
     }
 
-    #pragma omp parallel shared(all_centroids, all_variances, data) num_threads(n_jobs)
+    #pragma omp parallel shared(all_centroids, all_variances, data, distance_metric) num_threads(n_jobs) default(shared)
     {
         int id = omp_get_thread_num();
         double minimum_variance, cur_variance;
@@ -179,7 +179,7 @@ void minibatch_multi(double *data, double *centroids, int n_samples, int max_ite
         all_centroids = centroids;
     }
 
-    #pragma omp parallel shared(all_centroids, all_variances, data) num_threads(n_jobs)
+    #pragma omp parallel shared(all_centroids, all_variances, data, distance_metric) num_threads(n_jobs) default(shared)
     {
         int id = omp_get_thread_num();
         double minimum_variance, cur_variance;
@@ -250,7 +250,7 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, dou
     int *reassign_centroid_indicies = (int*) malloc(k * sizeof(int));
     int count_diff = 0, reassign_num = 0, max_count_diff = 0;
 
-    double current_bic, bic_sum;
+    double current_bic, bic_sum = 0.0;
     double *historical_bic;
     int historical_bic_idx = 0;
     if (bic_ratio_termination > 0.0) {
@@ -376,6 +376,7 @@ void minibatch_iteration(double *data, double *centroids, int *sample_indicies, 
 
 void reassign_centroids(double *data, double *centroids, int *reassign_clusters, int n_samples, int K, int k, int N, int D) {
     unsigned int seed = (int) clock() * (omp_get_thread_num() + 1);
+    srand(seed);
 
     double distance, total_distance2;
     double *distances2 = (double*) malloc(n_samples * sizeof(double));
@@ -393,7 +394,7 @@ void reassign_centroids(double *data, double *centroids, int *reassign_clusters,
         total_distance2 = 0.0;
         
         int index;
-        double d = (rand_r(&seed) / ((double)RAND_MAX+1)) * total_distance2;
+        double d = (rand() / ((double)RAND_MAX+1)) * total_distance2;
         for(index = 0; index < n_samples && d >= 0; index++) {
             d -= distances2[index];
         }
@@ -419,8 +420,9 @@ void reassign_centroids(double *data, double *centroids, int *reassign_clusters,
 void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int D) {
     /* The first cluster is centered from a randomly chosen point in the data */
     unsigned int seed = (int) clock() * (omp_get_thread_num() + 1);
+    srand(seed);
 
-    int index = (int) (rand_r(&seed) / ((double)RAND_MAX+1) * N);
+    int index = (int) (rand() / ((double)RAND_MAX+1) * N);
     for(int i=0; i<D; i++) {
         centroids[i] = data[index*D + i];
     }
@@ -446,7 +448,7 @@ void kmeanspp(double *data, double *centroids, int n_samples, int k, int N, int 
         }
         
         int index;
-        double d = (rand_r(&seed) / ((double)RAND_MAX+1)) * total_distance2;
+        double d = (rand() / ((double)RAND_MAX+1)) * total_distance2;
         for(index = 0; index < N && d >= 0; index++) {
             d -= distances2[index];
         }

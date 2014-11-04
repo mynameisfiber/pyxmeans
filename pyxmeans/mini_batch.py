@@ -6,7 +6,7 @@ import _minibatch
 import multiprocessing
 
 class MiniBatch(object):
-    def __init__(self, n_clusters, n_samples=None, max_iter=1000, n_runs=4, n_init=3, init='kmeans++', n_jobs=0, bic_termination=-1.0, reassignment_ratio=0.0, compute_labels=False, verbose=False):
+    def __init__(self, n_clusters, n_samples=None, max_iter=1000, n_runs=4, n_init=3, init='kmeans++', n_jobs=0, bic_termination=-1.0, reassignment_ratio=0.0, compute_labels=False, verbose=False, metric="euclidian"):
         """
         Create a MiniBatch model as described in http://www.eecs.tufts.edu/~dsculley/papers/fastkmeans.pdf
 
@@ -58,6 +58,12 @@ class MiniBatch(object):
         :param vebose: Toggle verbosity
         :type verbose: bool
 
+        :param metric: Set the metric to be used. WARNING: this value is shared
+                       amongst all mini_batch instances and only the most
+                       recently set value will be used.
+        :type verbose: string ('euclidian', 'cosine') or 
+                       callable (func(ndarray, ndarray)->float)
+
         :returns: Trained MiniBatch instance
         :rtype: MiniBatch
         """
@@ -77,8 +83,15 @@ class MiniBatch(object):
         self.cluster_centers_ = None
         self.labels_ = None
 
+        self.metric = metric
+        self.set_metric(metric)
+
         if n_jobs <= 0:
             self.n_jobs = multiprocessing.cpu_count() - n_jobs
+
+
+    def set_metric(self, metric):
+        return _minibatch.set_metric(metric)
 
 
     def fit(self, data):

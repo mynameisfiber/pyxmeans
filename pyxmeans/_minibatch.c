@@ -20,7 +20,10 @@ static char model_variance_docstring[] =
     "Calculate the model variance of the clusters given the data";
 static char assign_centroids_docstring[] =
     "Assigns each piece of data to a centroid";
+static char set_metric_docstring[] =
+    "Sets the metric to be used when calculating mini-batches. Input value can be 'euclidian' or 'cosine'";
 
+PyObject *python_metric = NULL;
 
 PyArrayObject* py_assign_centroids(PyObject* self, PyObject* args) {
     PyArrayObject* data;
@@ -413,6 +416,75 @@ PyArrayObject* py_kmeanspp(PyObject* self, PyObject* args) {
     return centroids;
 }
 
+double python_distance(double *A, double *B, int D) {
+    double result;
+    npy_intp dims[] = {D};
+    PyObject *arglist;
+    PyObject *pyresult;
+
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    {
+        // We have the GIL locked
+        PyObject *pyA = PyArray_SimpleNewFromData(1, dims, NPY_DOUBLE, A);
+        PyObject *pyB = PyArray_SimpleNewFromData(1, dims, NPY_DOUBLE, B);
+
+        arglist = Py_BuildValue("OO", pyA, pyB);
+        pyresult = PyEval_CallObject(python_metric, arglist);
+
+        Py_XDECREF(arglist);
+        Py_XDECREF(pyA);
+        Py_XDECREF(pyB);
+
+        if (pyresult == NULL) {
+            PyErr_Print();
+            result = 0.0;
+        }
+
+        if (PyFloat_Check(pyresult)) {
+            result = PyFloat_AsDouble(pyresult);
+        } else {
+            _LOG("Invalid result from python metric: not a float!\n");
+            result = 0.0;
+        }
+        Py_XDECREF(pyresult);
+    }
+    PyGILState_Release(gstate);
+
+    return result;
+}
+
+PyObject* py_set_metric(PyObject* self, PyObject* args) {
+    PyObject *metric_object;
+
+    if (!PyArg_ParseTuple(args, "O", &metric_object)) { 
+        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
+        return NULL;
+    }
+
+    if (PyString_Check(metric_object)) {
+        char *metric = PyString_AsString(metric_object);
+        if (strcmp("euclidian", metric) == 0) {
+            set_distance_metric(0);
+        } else if (strcmp("cosine", metric) == 0) {
+            set_distance_metric(1);
+        } else {
+            PyErr_SetString(PyExc_ValueError, "Invalid metric string value");
+            return NULL;
+        }
+    } else if (PyCallable_Check(metric_object)) {
+        Py_XDECREF(python_metric);
+        Py_XINCREF(metric_object);
+        python_metric = metric_object;
+        distance_metric = python_distance;
+    } else {
+        PyErr_SetString(PyExc_TypeError, "Invalid metric type");
+        return NULL;
+    }
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
 /* Module specification */
 static PyMethodDef module_methods[] = {
     {"minibatch"        , py_minibatch        , METH_VARARGS , minibatch_docstring        }  , 
@@ -422,6 +494,7 @@ static PyMethodDef module_methods[] = {
     {"kmeanspp_multi"   , py_kmeanspp_multi   , METH_VARARGS , kmeanspp_multi_docstring   }  , 
     {"bic"              , py_bic              , METH_VARARGS , bic_docstring              }  , 
     {"model_variance"   , py_model_variance   , METH_VARARGS , model_variance_docstring   }  , 
+    {"set_metric"       , py_set_metric       , METH_VARARGS , set_metric_docstring       }  , 
     {NULL               , NULL                , 0            , NULL                       } 
 };
  
@@ -431,6 +504,8 @@ PyMODINIT_FUNC init_minibatch(void)
     PyObject *m = Py_InitModule3("_minibatch", module_methods, module_docstring);
     if (m == NULL)
         return;
+
+    set_distance_metric(0);
  
     /* Load `numpy` functionality. */
     import_array();

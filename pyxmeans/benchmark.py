@@ -40,7 +40,6 @@ def error(actual, test):
         err += v
     return err / float(len(test))
 
-
 if __name__ == "__main__":
     print "Creating data"
     N = 10000

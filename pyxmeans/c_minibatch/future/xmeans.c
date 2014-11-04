@@ -41,7 +41,7 @@ int xmeans(double *data, double *centroids, int n_samples, int max_iter, int k_m
             centroid_distances[c1] = -1;
             for(int c2=0; c2<k; c2++) {
                 if (c1 != c2) {
-                    distance = euclidian_distance(centroids + c1*D, centroids + c2*D, D);
+                    distance = distance_metric(centroids + c1*D, centroids + c2*D, D);
                     if (centroid_distances[c1] == -1 || distance < centroid_distances[c1]) {
                         centroid_distances[c1] = distance;
                     }
