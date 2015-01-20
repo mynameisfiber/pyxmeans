@@ -46,7 +46,10 @@ double euclidian_distance(double *A, double *B, int D) {
 }
 
 /*
- * Returns the cosine distance between vectors A and B of length D
+ * Returns the cosine distance between vectors A and B of length D.  We
+ * renormalize the distance such that a value of 0 is returned when the vectors
+ * are pointing in the same direction and a distance of 2 is returned when they
+ * are pointing in opposite directions
  */
 double cosine_distance(double *A, double *B, int D) {
     double dot = 0.0;
@@ -58,7 +61,7 @@ double cosine_distance(double *A, double *B, int D) {
         A++;
         B++;
     }
-    return dot / (sqrt(lenA) * sqrt(lenB));
+    return 1.0 - dot / (sqrt(lenA) * sqrt(lenB));
 }
 
 /*
