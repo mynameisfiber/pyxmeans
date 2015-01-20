@@ -1,7 +1,6 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include "c_minibatch/minibatch.h"
-#include "c_minibatch/distance.h"
  
 /* Docstrings */
 static char module_docstring[] =

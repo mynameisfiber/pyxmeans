@@ -33,7 +33,7 @@ class XMeans(object):
         cluster_centers = self.init
         while self.kmax is None or k <= self.kmax:
             logging.info("Fitting with k=%d", k)
-            self._model = self._fit(k, data, cluster_centers)
+            self._model = self._fit(k, data, self.init)#cluster_centers)
             
             centroid_distances = euclidean_distances(self._model.centroids, self._model.centroids)
             centroid_distances += np.diag([np.Infinity] * k)
@@ -54,8 +54,8 @@ class XMeans(object):
 
                 logging.info("\t\tRunning secondary kmeans")
                 model_index = (self._model.labels == i)
-                if not np.any(model_index):
-                    logging.info("Disregarding cluster since it has no citizens")
+                if model_index.sum() <= 1:
+                    logging.info("Disregarding cluster since it has one or no citizens")
                     continue
                 points = data[model_index]
                 test_model = self._fit(2, points, np.asarray([new_point1, new_point2]))
@@ -84,7 +84,6 @@ class XMeans(object):
             k, 
             compute_labels = True,
             init = init,
-            n_jobs = 0,
             **self._minibatch_args
         ).fit(data[:])
         self.cluster_centers_ = self.model.cluster_centers_
@@ -136,7 +135,8 @@ class XMeans(object):
             init = centroids
         else:
             init = np.array(centroids, dtype=data.dtype, copy=True)
-        n_samples = int(self.sample_percent * len(data))
+        n_samples = int(self.sample_percent * len(data)) or 1
+        print "|data| = {}, n_samples = {}".format(len(data), n_samples)
         model = MiniBatch(
             k, 
             compute_labels = True,

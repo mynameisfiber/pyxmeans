@@ -50,9 +50,9 @@ class MiniBatch(object):
                        will run on all but one core, etc..)
         :type n_jobs: int
 
-        :param computer_labels: Whether to calculate the labels for the data
-                                the model is fit with.  This data is available
-                                in MiniBatch.labels_
+        :param compute_labels: Whether to calculate the labels for the data
+                               the model is fit with.  This data is available
+                               in MiniBatch.labels_
         :type compute_labels: bool
 
         :param vebose: Toggle verbosity
@@ -74,7 +74,7 @@ class MiniBatch(object):
         self.n_runs = n_runs
         self.n_init = n_init
         self.n_jobs = n_jobs
-        self.compute_labels = compute_labels
+        self._compute_labels = compute_labels
         self.verbose = verbose
 
         self.bic_termination = bic_termination
@@ -130,13 +130,19 @@ class MiniBatch(object):
         else:
             self.cluster_centers_ =  _minibatch.minibatch(data, self.cluster_centers_, self.n_samples, self.max_iter, self.bic_termination, self.reassignment_ratio)
 
-        if self.compute_labels:
+        if self._compute_labels:
             if self.verbose:
                 print "Computing labels"
-            self.labels_ = np.zeros((data.shape[0], ), dtype=np.intc)
-            self.labels_ = _minibatch.assign_centroids(data, self.cluster_centers_, self.labels_, self.n_jobs)
+            self.compute_labels(data)
 
         return self
+
+
+    def compute_labels(self, data):
+        self.labels_ = np.zeros((data.shape[0], ), dtype=np.intc)
+        self.labels_ = _minibatch.assign_centroids(data, self.cluster_centers_, self.labels_, self.n_jobs)
+        return self
+
 
 
     def predict(self, data):

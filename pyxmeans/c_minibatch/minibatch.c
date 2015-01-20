@@ -6,7 +6,6 @@
 
 #include "minibatch.h"
 #include "generate_data.h"
-#include "distance.h"
 
 #define EARLY_TERM_WINDOW (10)
 
