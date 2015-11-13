@@ -1,3 +1,6 @@
+
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include "c_minibatch/minibatch.h"
@@ -31,17 +34,18 @@ static char set_metric_docstring[] =
     "You can also supply a callable, which should take two vectors "
     "and return a nonnegative number.";
 
-PyObject *python_metric = NULL;
+static PyObject *python_metric = NULL;
 
-PyArrayObject* py_assign_centroids(PyObject* self, PyObject* args) {
-    PyArrayObject* data;
-    PyArrayObject* centroids;
-    PyArrayObject* assignments;
+static PyObject *
+py_assign_centroids(PyObject *Py_UNUSED(self), PyObject *args)
+{
+    PyArrayObject *data;
+    PyArrayObject *centroids;
+    PyArrayObject *assignments;
     int n_jobs;
 
     if (!PyArg_ParseTuple(args, "OOOi",
                           &data, &centroids, &assignments, &n_jobs)) {
-        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
     if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
@@ -103,12 +107,14 @@ PyArrayObject* py_assign_centroids(PyObject* self, PyObject* args) {
     );
 
     Py_XINCREF(assignments);
-    return assignments;
+    return (PyObject *)assignments;
 }
 
-PyArrayObject* py_minibatch_multi(PyObject* self, PyObject* args) {
-    PyArrayObject* data;
-    PyArrayObject* centroids;
+static PyObject *
+py_minibatch_multi(PyObject *Py_UNUSED(self), PyObject *args)
+{
+    PyArrayObject *data;
+    PyArrayObject *centroids;
     int n_samples, max_iter, n_runs, n_jobs;
     double bic_ratio_termination, reassignment_ratio;
 
@@ -116,7 +122,6 @@ PyArrayObject* py_minibatch_multi(PyObject* self, PyObject* args) {
                           &data, &centroids, &n_samples, &max_iter,
                           &n_runs, &n_jobs, &bic_ratio_termination,
                           &reassignment_ratio)) {
-        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
     if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
@@ -172,19 +177,20 @@ PyArrayObject* py_minibatch_multi(PyObject* self, PyObject* args) {
     );
 
     Py_XINCREF(centroids);
-    return centroids;
+    return (PyObject *)centroids;
 }
 
-PyArrayObject* py_minibatch(PyObject* self, PyObject* args) {
-    PyArrayObject* data;
-    PyArrayObject* centroids;
+static PyObject *
+py_minibatch(PyObject *Py_UNUSED(self), PyObject *args)
+{
+    PyArrayObject *data;
+    PyArrayObject *centroids;
     int n_samples, max_iter;
     double reassignment_ratio, bic_ratio_termination;
 
     if (!PyArg_ParseTuple(args, "OOiidd",
                           &data, &centroids, &n_samples, &max_iter,
                           &bic_ratio_termination, &reassignment_ratio)) {
-        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
     if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
@@ -238,16 +244,16 @@ PyArrayObject* py_minibatch(PyObject* self, PyObject* args) {
     );
 
     Py_XINCREF(centroids);
-    return centroids;
+    return (PyObject *)centroids;
 }
 
-
-PyObject* py_model_variance(PyObject* self, PyObject* args) {
-    PyArrayObject* data;
-    PyArrayObject* centroids;
+static PyObject *
+py_model_variance(PyObject *Py_UNUSED(self), PyObject *args)
+{
+    PyArrayObject *data;
+    PyArrayObject *centroids;
 
     if (!PyArg_ParseTuple(args, "OO", &data, &centroids)) {
-        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
     if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
@@ -295,13 +301,13 @@ PyObject* py_model_variance(PyObject* self, PyObject* args) {
     return ret;
 }
 
-
-PyObject* py_bic(PyObject* self, PyObject* args) {
-    PyArrayObject* data;
-    PyArrayObject* centroids;
+static PyObject *
+py_bic(PyObject *Py_UNUSED(self), PyObject *args)
+{
+    PyArrayObject *data;
+    PyArrayObject *centroids;
 
     if (!PyArg_ParseTuple(args, "OO", &data, &centroids)) {
-        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
     if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
@@ -350,14 +356,15 @@ PyObject* py_bic(PyObject* self, PyObject* args) {
     return ret;
 }
 
-PyArrayObject* py_kmeanspp_multi(PyObject* self, PyObject* args) {
-    PyArrayObject* data;
-    PyArrayObject* centroids;
+static PyObject *
+py_kmeanspp_multi(PyObject *Py_UNUSED(self), PyObject *args)
+{
+    PyArrayObject *data;
+    PyArrayObject *centroids;
     int n_samples, n_runs, n_jobs;
 
     if (!PyArg_ParseTuple(args, "OOiii",
                           &data, &centroids, &n_samples, &n_runs, &n_jobs)) {
-        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
     if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
@@ -410,17 +417,17 @@ PyArrayObject* py_kmeanspp_multi(PyObject* self, PyObject* args) {
     );
 
     Py_XINCREF(centroids);
-    return centroids;
+    return (PyObject *)centroids;
 }
 
-
-PyArrayObject* py_kmeanspp(PyObject* self, PyObject* args) {
-    PyArrayObject* data;
-    PyArrayObject* centroids;
+static PyObject *
+py_kmeanspp(PyObject *Py_UNUSED(self), PyObject *args)
+{
+    PyArrayObject *data;
+    PyArrayObject *centroids;
     int n_samples;
 
     if (!PyArg_ParseTuple(args, "OOi", &data, &centroids, &n_samples)) {
-        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
     if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
@@ -472,10 +479,12 @@ PyArrayObject* py_kmeanspp(PyObject* self, PyObject* args) {
     );
 
     Py_XINCREF(centroids);
-    return centroids;
+    return (PyObject *)centroids;
 }
 
-double python_distance(double *A, double *B, int D) {
+static double
+python_distance(double *A, double *B, int D)
+{
     double result;
     npy_intp dims[] = {D};
     PyObject *arglist;
@@ -512,16 +521,17 @@ double python_distance(double *A, double *B, int D) {
     return result;
 }
 
-PyObject* py_set_metric(PyObject* self, PyObject* args) {
+static PyObject *
+py_set_metric(PyObject *Py_UNUSED(self), PyObject *args)
+{
     PyObject *metric_object;
 
     if (!PyArg_ParseTuple(args, "O", &metric_object)) {
-        PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");
         return NULL;
     }
 
-    if (PyString_Check(metric_object)) {
-        char *metric = PyString_AsString(metric_object);
+    if (PyUnicode_Check(metric_object)) {
+        char *metric = PyUnicode_AsUTF8(metric_object);
         if (strcmp("euclidian", metric) == 0) {
             set_distance_metric(0);
         } else if (strcmp("cosine", metric) == 0) {
@@ -558,17 +568,26 @@ static PyMethodDef module_methods[] = {
     { 0, 0, 0, 0 }
 };
 
-/* Initialize the module */
-PyMODINIT_FUNC init_minibatch(void)
-{
-    PyObject *m = Py_InitModule3("_minibatch",
-                                 module_methods,
-                                 module_docstring);
-    if (m == NULL)
-        return;
+static struct PyModuleDef minibatch_module = {
+  PyModuleDef_HEAD_INIT,
+  "_minibatch",
+  module_docstring,
+  -1,
+  module_methods
+};
 
+/* Initialize the module */
+PyMODINIT_FUNC PyInit__minibatch(void)
+{
+    PyObject *m = PyModule_Create(&minibatch_module);
+    if (!m)
+        return NULL;
+
+    /* Ensure numpy is initialized. */
+    import_array();
+
+    /* Ensure c_minibatch is initialized. */
     set_distance_metric(0);
 
-    /* Load `numpy` functionality. */
-    import_array();
+    return m;
 }
