@@ -36,6 +36,53 @@ static char set_metric_docstring[] =
 
 static PyObject *python_metric = NULL;
 
+/* common argument-checking fragments */
+
+#define require_contiguous_ndarray(arg, dim, etype, etypename) do {     \
+        if (!PyArray_Check(arg) || !PyArray_ISCONTIGUOUS(arg)) {        \
+            PyErr_SetString(PyExc_TypeError,                            \
+                            #arg " must be a contiguous numpy array."); \
+            return NULL;                                                \
+        }                                                               \
+        if (PyArray_NDIM(arg) != dim) {                                 \
+            PyErr_SetString(PyExc_TypeError,                            \
+                            #arg " must be " #dim "-dimensional.");     \
+            return NULL;                                                \
+        }                                                               \
+        if (PyArray_TYPE(arg) != etype) {                               \
+            PyErr_SetString(PyExc_TypeError,                            \
+                            #arg " element type must be " etypename);   \
+            return NULL;                                                \
+        }                                                               \
+    } while (0)
+
+#define require_positive(x, what) do {                                  \
+        if ((x) <= 0) {                                                 \
+            PyErr_SetString(PyExc_ValueError,                           \
+                "not enough " what " (need at least one)");             \
+            return NULL;                                                \
+        }                                                               \
+    } while (0)
+
+#define require_positive_as_int(x, what) do {                           \
+        require_positive(x, what);                                      \
+        if ((x) > (npy_intp)INT_MAX) {                                  \
+            PyErr_SetString(PyExc_ValueError,                           \
+                "too many " what " (can only go up to INT_MAX)");       \
+            return NULL;                                                \
+        }                                                               \
+    } while (0)
+
+#define require_dimension_match(a_arr, a_dim, b_arr, b_dim, what) do {   \
+        if (PyArray_DIM(a_arr, a_dim) != PyArray_DIM(b_arr, b_dim)) {    \
+            PyErr_SetString(PyExc_ValueError,                            \
+                #a_arr " and " #b_arr " must agree on number of " what); \
+            return NULL;                                                 \
+        }                                                                \
+    } while (0)
+
+/* module functions */
+
 static PyObject *
 py_assign_centroids(PyObject *Py_UNUSED(self), PyObject *args)
 {
@@ -45,65 +92,31 @@ py_assign_centroids(PyObject *Py_UNUSED(self), PyObject *args)
     int n_jobs;
 
     if (!PyArg_ParseTuple(args, "OOOi",
-                          &data, &centroids, &assignments, &n_jobs)) {
+                          &data, &centroids, &assignments, &n_jobs))
         return NULL;
-    }
-    if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
-        PyErr_SetString(PyExc_RuntimeError, "data not what was expected.");
-        return NULL;
-    }
-    if (!PyArray_Check(centroids) || !PyArray_ISCONTIGUOUS(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids not what was expected.");
-        return NULL;
-    }
-    if (!PyArray_Check(assignments) || !PyArray_ISCONTIGUOUS(assignments)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "assignments not what was expected.");
-        return NULL;
-    }
-    if (PyArray_TYPE(data) != PyArray_TYPE(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids and data should have same type.");
-        return NULL;
-    }
-    if (PyArray_NDIM(data) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "data should be two dimensional.");
-        return NULL;
-    }
-    if (PyArray_NDIM(centroids) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids should be two dimensional.");
-        return NULL;
-    }
-    if (PyArray_NDIM(assignments) != 1) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "assignments should be one dimensional.");
-        return NULL;
-    }
 
-    const int N = (int) PyArray_DIM(data, 0);
-    const int D = (int) PyArray_DIM(data, 1);
-    const int k = (int) PyArray_DIM(centroids, 0);
+    require_contiguous_ndarray(data,        2, NPY_DOUBLE, "double");
+    require_contiguous_ndarray(centroids,   2, NPY_DOUBLE, "double");
+    require_contiguous_ndarray(assignments, 1, NPY_INT,    "int");
 
-    if (PyArray_DIM(centroids, 1) != D) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids has wrong number of features.");
-        return NULL;
-    }
-    if (PyArray_DIM(assignments, 0) != N) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "assignments has wrong number of samples.");
-        return NULL;
-    }
+    require_dimension_match(data, 1, centroids, 1, "features");
+    require_dimension_match(data, 0, assignments, 0, "samples");
+
+    const npy_intp N = PyArray_DIM(data, 0);
+    const npy_intp D = PyArray_DIM(data, 1);
+    const npy_intp k = PyArray_DIM(centroids, 0);
+
+    require_positive_as_int(N, "samples");
+    require_positive_as_int(D, "features");
+    require_positive_as_int(k, "centroids");
+    require_positive(n_jobs, "concurrent jobs");
 
     assign_centroids_multi(
         PyArray_DATA(data),
         PyArray_DATA(centroids),
         PyArray_DATA(assignments),
         n_jobs,
-        k, N, D
+        (int)k, (int)N, (int)D
     );
 
     Py_XINCREF(assignments);
@@ -121,44 +134,27 @@ py_minibatch_multi(PyObject *Py_UNUSED(self), PyObject *args)
     if (!PyArg_ParseTuple(args, "OOiiiidd",
                           &data, &centroids, &n_samples, &max_iter,
                           &n_runs, &n_jobs, &bic_ratio_termination,
-                          &reassignment_ratio)) {
+                          &reassignment_ratio))
         return NULL;
-    }
-    if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
-        PyErr_SetString(PyExc_RuntimeError, "data not what was expected.");
-        return NULL;
-    }
-    if (!PyArray_Check(centroids) || !PyArray_ISCONTIGUOUS(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids not what was expected.");
-        return NULL;
-    }
-    if (PyArray_TYPE(data) != PyArray_TYPE(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids and data should have same type.");
-        return NULL;
-    }
-    if (PyArray_NDIM(data) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "data should be two dimensional");
-        return NULL;
-    }
-    if (PyArray_NDIM(centroids) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids should be two dimensional");
-        return NULL;
-    }
 
-    const int N = (int) PyArray_DIM(data, 0);
-    const int D = (int) PyArray_DIM(data, 1);
-    const int k = (int) PyArray_DIM(centroids, 0);
+    require_contiguous_ndarray(data,      2, NPY_DOUBLE, "double");
+    require_contiguous_ndarray(centroids, 2, NPY_DOUBLE, "double");
 
-    if (PyArray_DIM(centroids, 1) != D) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids has wrong number of features.");
-        return NULL;
-    }
-    if (n_samples > N) {
+    require_dimension_match(data, 1, centroids, 1, "features");
+
+    const npy_intp N = PyArray_DIM(data, 0);
+    const npy_intp D = PyArray_DIM(data, 1);
+    const npy_intp k = PyArray_DIM(centroids, 0);
+
+    require_positive_as_int(N, "samples");
+    require_positive_as_int(D, "features");
+    require_positive_as_int(k, "centroids");
+    require_positive(n_jobs, "concurrent jobs");
+    require_positive(n_runs, "total runs");
+    require_positive(max_iter, "allowed iterations");
+    require_positive(n_samples, "requested samples");
+
+    if (n_samples > (int)N) {
         PyErr_SetString(PyExc_RuntimeError,
                         "more samples requested than data.");
         return NULL;
@@ -173,7 +169,7 @@ py_minibatch_multi(PyObject *Py_UNUSED(self), PyObject *args)
         n_jobs,
         bic_ratio_termination,
         reassignment_ratio,
-        k, N, D
+        (int)k, (int)N, (int)D
     );
 
     Py_XINCREF(centroids);
@@ -193,41 +189,23 @@ py_minibatch(PyObject *Py_UNUSED(self), PyObject *args)
                           &bic_ratio_termination, &reassignment_ratio)) {
         return NULL;
     }
-    if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
-        PyErr_SetString(PyExc_RuntimeError, "data not what was expected.");
-        return NULL;
-    }
-    if (!PyArray_Check(centroids) || !PyArray_ISCONTIGUOUS(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids not what was expected.");
-        return NULL;
-    }
-    if (PyArray_TYPE(data) != PyArray_TYPE(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids and data should have same type.");
-        return NULL;
-    }
-    if (PyArray_NDIM(data) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "data should be two dimensional");
-        return NULL;
-    }
-    if (PyArray_NDIM(centroids) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids should be two dimensional");
-        return NULL;
-    }
 
-    const int N = (int) PyArray_DIM(data, 0);
-    const int D = (int) PyArray_DIM(data, 1);
-    const int k = (int) PyArray_DIM(centroids, 0);
+    require_contiguous_ndarray(data,      2, NPY_DOUBLE, "double");
+    require_contiguous_ndarray(centroids, 2, NPY_DOUBLE, "double");
 
-    if (PyArray_DIM(centroids, 1) != D) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids has wrong number of features.");
-        return NULL;
-    }
-    if (n_samples > N) {
+    require_dimension_match(data, 1, centroids, 1, "features");
+
+    const npy_intp N = PyArray_DIM(data, 0);
+    const npy_intp D = PyArray_DIM(data, 1);
+    const npy_intp k = PyArray_DIM(centroids, 0);
+
+    require_positive_as_int(N, "samples");
+    require_positive_as_int(D, "features");
+    require_positive_as_int(k, "centroids");
+    require_positive(max_iter, "allowed iterations");
+    require_positive(n_samples, "requested samples");
+
+    if (n_samples > (int)N) {
         PyErr_SetString(PyExc_RuntimeError,
                         "more samples requested than data.");
         return NULL;
@@ -240,7 +218,7 @@ py_minibatch(PyObject *Py_UNUSED(self), PyObject *args)
         max_iter,
         bic_ratio_termination,
         reassignment_ratio,
-        k, N, D
+        (int)k, (int)N, (int)D
     );
 
     Py_XINCREF(centroids);
@@ -256,49 +234,27 @@ py_model_variance(PyObject *Py_UNUSED(self), PyObject *args)
     if (!PyArg_ParseTuple(args, "OO", &data, &centroids)) {
         return NULL;
     }
-    if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
-        PyErr_SetString(PyExc_RuntimeError, "data not what was expected.");
-        return NULL;
-    }
-    if (!PyArray_Check(centroids) || !PyArray_ISCONTIGUOUS(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids not what was expected.");
-        return NULL;
-    }
-    if (PyArray_TYPE(data) != PyArray_TYPE(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids and data should have same type.");
-        return NULL;
-    }
-    if (PyArray_NDIM(data) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "data should be two dimensional");
-        return NULL;
-    }
-    if (PyArray_NDIM(centroids) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids should be two dimensional");
-        return NULL;
-    }
 
-    const int N = (int) PyArray_DIM(data, 0);
-    const int D = (int) PyArray_DIM(data, 1);
-    const int k = (int) PyArray_DIM(centroids, 0);
+    require_contiguous_ndarray(data,      2, NPY_DOUBLE, "double");
+    require_contiguous_ndarray(centroids, 2, NPY_DOUBLE, "double");
 
-    if (PyArray_DIM(centroids, 1) != D) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids has wrong number of features.");
-        return NULL;
-    }
+    require_dimension_match(data, 1, centroids, 1, "features");
+
+    const npy_intp N = PyArray_DIM(data, 0);
+    const npy_intp D = PyArray_DIM(data, 1);
+    const npy_intp k = PyArray_DIM(centroids, 0);
+
+    require_positive_as_int(N, "samples");
+    require_positive_as_int(D, "features");
+    require_positive_as_int(k, "centroids");
 
     double variance = model_variance(
         PyArray_DATA(data),
         PyArray_DATA(centroids),
-        k, N, D
+        (int)k, (int)N, (int)D
     );
 
-    PyObject *ret = Py_BuildValue("d", variance);
-    return ret;
+    return Py_BuildValue("d", variance);
 }
 
 static PyObject *
@@ -310,50 +266,27 @@ py_bic(PyObject *Py_UNUSED(self), PyObject *args)
     if (!PyArg_ParseTuple(args, "OO", &data, &centroids)) {
         return NULL;
     }
-    if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "data not what was expected.");
-        return NULL;
-    }
-    if (!PyArray_Check(centroids) || !PyArray_ISCONTIGUOUS(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids not what was expected.");
-        return NULL;
-    }
-    if (PyArray_TYPE(data) != PyArray_TYPE(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids and data should have same type.");
-        return NULL;
-    }
-    if (PyArray_NDIM(data) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "data should be two dimensional");
-        return NULL;
-    }
-    if (PyArray_NDIM(centroids) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids should be two dimensional");
-        return NULL;
-    }
 
-    const int N = (int) PyArray_DIM(data, 0);
-    const int D = (int) PyArray_DIM(data, 1);
-    const int k = (int) PyArray_DIM(centroids, 0);
+    require_contiguous_ndarray(data,      2, NPY_DOUBLE, "double");
+    require_contiguous_ndarray(centroids, 2, NPY_DOUBLE, "double");
 
-    if (PyArray_DIM(centroids, 1) != D) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids has wrong number of features.");
-        return NULL;
-    }
+    require_dimension_match(data, 1, centroids, 1, "features");
+
+    const npy_intp N = PyArray_DIM(data, 0);
+    const npy_intp D = PyArray_DIM(data, 1);
+    const npy_intp k = PyArray_DIM(centroids, 0);
+
+    require_positive_as_int(N, "samples");
+    require_positive_as_int(D, "features");
+    require_positive_as_int(k, "centroids");
 
     double bic = bayesian_information_criterion(
         PyArray_DATA(data),
         PyArray_DATA(centroids),
-        k, N, D
+        (int)k, (int)N, (int)D
     );
 
-    PyObject *ret = Py_BuildValue("d", bic);
-    return ret;
+    return Py_BuildValue("d", bic);
 }
 
 static PyObject *
@@ -367,43 +300,25 @@ py_kmeanspp_multi(PyObject *Py_UNUSED(self), PyObject *args)
                           &data, &centroids, &n_samples, &n_runs, &n_jobs)) {
         return NULL;
     }
-    if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
-        PyErr_SetString(PyExc_RuntimeError, "data not what was expected.");
-        return NULL;
-    }
-    if (!PyArray_Check(centroids) || !PyArray_ISCONTIGUOUS(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids not what was expected.");
-        return NULL;
-    }
-    if (PyArray_TYPE(data) != PyArray_TYPE(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids and data should have same type.");
-        return NULL;
-    }
-    if (PyArray_NDIM(data) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "data should be two dimensional");
-        return NULL;
-    }
-    if (PyArray_NDIM(centroids) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids should be two dimensional");
-        return NULL;
-    }
 
-    const int N = (int) PyArray_DIM(data, 0);
-    const int D = (int) PyArray_DIM(data, 1);
-    const int k = (int) PyArray_DIM(centroids, 0);
+    require_contiguous_ndarray(data,      2, NPY_DOUBLE, "double");
+    require_contiguous_ndarray(centroids, 2, NPY_DOUBLE, "double");
 
-    if (n_samples >= N) {
+    require_dimension_match(data, 1, centroids, 1, "features");
+
+    const npy_intp N = PyArray_DIM(data, 0);
+    const npy_intp D = PyArray_DIM(data, 1);
+    const npy_intp k = PyArray_DIM(centroids, 0);
+
+    require_positive_as_int(N, "samples");
+    require_positive_as_int(D, "features");
+    require_positive_as_int(k, "centroids");
+    require_positive(n_jobs, "concurrent jobs");
+    require_positive(n_runs, "total runs");
+    require_positive(n_samples, "requested samples");
+    if (n_samples > (int)N) {
         PyErr_SetString(PyExc_RuntimeError,
-                        "n_samples must be smaller than the number of samples");
-        return NULL;
-    }
-    if (PyArray_DIM(centroids, 1) != D) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids has wrong number of features.");
+                        "more samples requested than data.");
         return NULL;
     }
 
@@ -430,52 +345,32 @@ py_kmeanspp(PyObject *Py_UNUSED(self), PyObject *args)
     if (!PyArg_ParseTuple(args, "OOi", &data, &centroids, &n_samples)) {
         return NULL;
     }
-    if (!PyArray_Check(data) || !PyArray_ISCONTIGUOUS(data)) {
+
+    require_contiguous_ndarray(data,      2, NPY_DOUBLE, "double");
+    require_contiguous_ndarray(centroids, 2, NPY_DOUBLE, "double");
+
+    require_dimension_match(data, 1, centroids, 1, "features");
+
+    const npy_intp N = PyArray_DIM(data, 0);
+    const npy_intp D = PyArray_DIM(data, 1);
+    const npy_intp k = PyArray_DIM(centroids, 0);
+
+    require_positive_as_int(N, "samples");
+    require_positive_as_int(D, "features");
+    require_positive_as_int(k, "centroids");
+    require_positive(n_samples, "requested samples");
+    if (n_samples > (int)N) {
         PyErr_SetString(PyExc_RuntimeError,
-                        "data not what was expected.");
-        return NULL;
-    }
-    if (!PyArray_Check(centroids) || !PyArray_ISCONTIGUOUS(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids not what was expected.");
-        return NULL;
-    }
-    if (PyArray_TYPE(data) != PyArray_TYPE(centroids)) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids and data should have same type.");
-        return NULL;
-    }
-    if (PyArray_NDIM(data) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "data should be two dimensional");
-        return NULL;
-    }
-    if (PyArray_NDIM(centroids) != 2) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids should be two dimensional");
+                        "more samples requested than data.");
         return NULL;
     }
 
-    const int N = (int) PyArray_DIM(data, 0);
-    const int D = (int) PyArray_DIM(data, 1);
-    const int k = (int) PyArray_DIM(centroids, 0);
-
-    if (n_samples >= N) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "n_samples must be smaller than the number of samples");
-        return NULL;
-    }
-    if (PyArray_DIM(centroids, 1) != D) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        "centroids has wrong number of features.");
-        return NULL;
-    }
 
     kmeanspp(
         PyArray_DATA(data),
         PyArray_DATA(centroids),
         n_samples,
-        k, N, D
+        (int)k, (int)N, (int)D
     );
 
     Py_XINCREF(centroids);
