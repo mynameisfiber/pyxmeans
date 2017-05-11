@@ -1,14 +1,18 @@
-#!/usr/bin/env python2.7
-
-import numpy as np
 import _minibatch
-
+import logging
 import multiprocessing
+import numpy as np
+
+logger = logging.getLogger(__name__)
 
 class MiniBatch(object):
-    def __init__(self, n_clusters, n_samples=None, max_iter=1000, n_runs=4, n_init=3, init='kmeans++', n_jobs=0, bic_termination=-1.0, reassignment_ratio=0.0, compute_labels=False, verbose=False, metric="euclidian"):
+    def __init__(self, n_clusters, n_samples=None, max_iter=1000,
+                 n_runs=4, n_init=3, init='kmeans++', n_jobs=0,
+                 bic_termination=-1.0, reassignment_ratio=0.0,
+                 compute_labels=False, verbose=False, metric="euclidian"):
         """
-        Create a MiniBatch model as described in http://www.eecs.tufts.edu/~dsculley/papers/fastkmeans.pdf
+        Create a MiniBatch model as described in
+        http://www.eecs.tufts.edu/~dsculley/papers/fastkmeans.pdf
 
         :param n_clusters: Number of clusters to classify
         :type n_clusters: int
@@ -61,7 +65,7 @@ class MiniBatch(object):
         :param metric: Set the metric to be used. WARNING: this value is shared
                        amongst all mini_batch instances and only the most
                        recently set value will be used.
-        :type verbose: string ('euclidian', 'cosine') or 
+        :type verbose: string ('euclidian', 'cosine') or
                        callable (func(ndarray, ndarray)->float)
 
         :returns: Trained MiniBatch instance
@@ -105,36 +109,50 @@ class MiniBatch(object):
         """
         data = np.asarray(data, dtype=np.double)
         if self.verbose:
-            print "Initializing clusters"
+            logger.info("Initializing clusters")
         if self.init == 'random':
-            self.cluster_centers_ = np.random.random((self.n_clusters, data.shape[1]), dtype=np.double)
+            self.cluster_centers_ = np.random.random(
+                (self.n_clusters, data.shape[1]), dtype=np.double)
         elif self.init == 'kmeans++':
-            self.cluster_centers_ = np.zeros((self.n_clusters, data.shape[1]), dtype=np.double)
+            self.cluster_centers_ = np.zeros(
+                (self.n_clusters, data.shape[1]), dtype=np.double)
             jobs = min(self.n_jobs, self.n_init)
             if jobs > 1:
-                self.cluster_centers_ = _minibatch.kmeanspp_multi(data, self.cluster_centers_, self.n_samples, self.n_init, jobs)
+                self.cluster_centers_ = _minibatch.kmeanspp_multi(
+                    data, self.cluster_centers_, self.n_samples,
+                    self.n_init, jobs)
             else:
-                self.cluster_centers_ = _minibatch.kmeanspp(data, self.cluster_centers_, self.n_samples)
+                self.cluster_centers_ = _minibatch.kmeanspp(
+                    data, self.cluster_centers_, self.n_samples)
         elif isinstance(self.init, np.ndarray):
             if not self.init.flags['C_CONTIGUOUS']:
-                raise Exception("init ndarray must be C_CONTIGUOUS")
+                raise TypeError("init ndarray must be C_CONTIGUOUS")
             elif self.init.shape != (self.n_clusters, data.shape[1]):
-                raise Exception("init cluster not of correct shape %r != (%d, %d)" % (self.init.shape, self.n_clusters, data.shape[1]))
+                raise TypeError("init cluster not of correct shape "
+                                "%r != (%d, %d)" % (self.init.shape,
+                                                    self.n_clusters,
+                                                    data.shape[1]))
             self.cluster_centers_ = self.init
 
         if self.verbose:
-            print "Running minibatch"
+            logger.info("Running minibatch")
         jobs = min(self.n_jobs, self.n_runs)
         if jobs > 1:
-            self.cluster_centers_ =  _minibatch.minibatch_multi(data, self.cluster_centers_, self.n_samples, self.max_iter, self.n_runs, jobs, self.bic_termination, self.reassignment_ratio)
+            self.cluster_centers_ =  _minibatch.minibatch_multi(
+                data, self.cluster_centers_, self.n_samples, self.max_iter,
+                self.n_runs, jobs, self.bic_termination,
+                self.reassignment_ratio)
         else:
-            self.cluster_centers_ =  _minibatch.minibatch(data, self.cluster_centers_, self.n_samples, self.max_iter, self.bic_termination, self.reassignment_ratio)
+            self.cluster_centers_ =  _minibatch.minibatch(
+                data, self.cluster_centers_, self.n_samples, self.max_iter,
+                self.bic_termination, self.reassignment_ratio)
 
         if self.compute_labels:
             if self.verbose:
-                print "Computing labels"
+                logger.info("Computing labels")
             self.labels_ = np.zeros((data.shape[0], ), dtype=np.intc)
-            self.labels_ = _minibatch.assign_centroids(data, self.cluster_centers_, self.labels_, self.n_jobs)
+            self.labels_ = _minibatch.assign_centroids(
+                data, self.cluster_centers_, self.labels_, self.n_jobs)
 
         return self
 
@@ -151,7 +169,8 @@ class MiniBatch(object):
         """
         assert self.cluster_centers_ is not None, "Model not yet fitted"
         labels = np.zeros((data.shape[0], ), dtype=np.intc)
-        labels = _minibatch.assign_centroids(data, self.cluster_centers_, labels, self.n_jobs)
+        labels = _minibatch.assign_centroids(data, self.cluster_centers_,
+                                             labels, self.n_jobs)
         return labels
 
 
