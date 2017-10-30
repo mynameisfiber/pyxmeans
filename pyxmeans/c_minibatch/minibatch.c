@@ -333,6 +333,7 @@ void minibatch(double *data, double *centroids, int n_samples, int max_iter, dou
     free(centroid_counts);
     free(sample_indicies);
     free(cluster_cache);
+    free(last_centroid_counts);
 
     if (bic_ratio_termination > 0.0) {
         free(historical_bic);
