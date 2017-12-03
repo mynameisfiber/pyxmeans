@@ -124,7 +124,7 @@ class XMeans(object):
                 XMeans._cluster_variance(num_points, clusters, centroids),
                 np.nextafter(0, 1))
             t3 = ((fRn * num_dims) / 2.0) * np.log((2.0 * np.pi) * variance)
-            t4 = (fRn - 1.0) / 2.0
+            t4 = num_dims * (fRn - 1.0) / 2.0
             ll += t1 - t2 - t3 - t4
         return ll
 
@@ -132,7 +132,8 @@ class XMeans(object):
     @classmethod
     def _cluster_variance(cls, num_points, clusters, centroids):
         s = 0
-        denom = float(num_points - len(centroids))
+        num_dims = clusters[0][0].shape[0]
+        denom = float(num_points - len(centroids)) * num_dims
         for cluster, centroid in zip(clusters, centroids):
             distances = euclidean_distances(cluster, centroid)
             s += (distances*distances).sum()
