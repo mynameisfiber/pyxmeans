@@ -67,41 +67,45 @@ double model_variance(double *data, double *centroids, int k, int N, int D) {
 double bayesian_information_criterion(double *data, double *centroids, int k, int N, int D) {
     /* Calculate the variance of the model and the centroid counts */
     int *centroid_count = (int*) malloc(k * sizeof(int));
-    for(int c=0; c<k; c++) {
-        centroid_count[c] = 0;
-    }
-
-    double variance_distance = 0.0;
-    for(int i=0; i<N; i++) {
-        int c = closest_centroid(data + i*D, centroids, k, D);
-        centroid_count[c] += 1;
-        variance_distance += distance_metric(data + i*D, centroids + c*D, D);
-    }
-    double variance = variance_distance / (double)(N - k);
-    if (variance == 0) {
-        variance = nextafter(0, 1);
-    }
-
-    /* Calculate the log likelihood */
-    double log_likelihood = 0.0;
-    double t1, t2, t3, t4;
-    double ccount;
-    for(int c=0; c<k; c++) {
-        ccount = (double) centroid_count[c];
-        if (ccount == 0) {
-            ccount = nextafter(0, 1);
+    if (centroid_count) {
+        for(int c=0; c<k; c++) {
+            centroid_count[c] = 0;
         }
-        t1 = ccount * log(ccount);
-        t2 = ccount * log(N);
-        t3 = (ccount * D) / 2.0 + log(2.0 * PI) * variance;
-        t4 = (ccount - 1.0) / 2.0;
-        log_likelihood += t1 - t2 - t3 - t4;
-    }
-    /* calculate the BIC with the number of free parameters = k * (D + 1) */
-    double bic = log_likelihood - k * (D + 1) * 2.0 * log(N);
 
-    free(centroid_count);
-    return bic;
+        double variance_distance = 0.0;
+        for(int i=0; i<N; i++) {
+            int c = closest_centroid(data + i*D, centroids, k, D);
+            centroid_count[c] += 1;
+            variance_distance += distance_metric(data + i*D, centroids + c*D, D);
+        }
+        double variance = variance_distance / (double)(N - k);
+        if (variance == 0) {
+            variance = nextafter(0, 1);
+        }
+
+        /* Calculate the log likelihood */
+        double log_likelihood = 0.0;
+        double t1, t2, t3, t4;
+        double ccount;
+        for(int c=0; c<k; c++) {
+            ccount = (double) centroid_count[c];
+            if (ccount == 0) {
+                ccount = nextafter(0, 1);
+            }
+            t1 = ccount * log(ccount);
+            t2 = ccount * log(N);
+            t3 = (ccount * D) / 2.0 + log(2.0 * PI) * variance;
+            t4 = (ccount - 1.0) / 2.0;
+            log_likelihood += t1 - t2 - t3 - t4;
+        }
+        /* calculate the BIC with the number of free parameters = k * (D + 1) */
+        double bic = log_likelihood - k * (D + 1) * 2.0 * log(N);
+
+        free(centroid_count);
+        return bic;
+    } else {
+        return (0.0);
+    }
 }
 
 /*
